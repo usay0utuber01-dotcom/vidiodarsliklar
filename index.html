@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html lang="uz">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VIDEO DARSLIK | Professional Ta'lim Platformasi</title>
-    
+
     <!-- Dependencies -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
+
     <!-- Styles -->
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
+
 <body>
 
     <!-- Navbar -->
@@ -33,19 +35,23 @@
                 <img src="assets/img/treyler.png" alt="Promo">
             </div>
         </div>
-            <div class="login-right">
-                <div class="logo-big">VIDEO<br>DARSLIK</div>
-                <p style="font-size: 1.2rem; color: #fff; margin-bottom: 20px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace;">Ro'yxatdan O'tish</p>
-                <input type="text" id="nameInput" class="old-input" placeholder="ISM VA FAMILIYANGIZ" autocomplete="off">
-                <button class="old-btn" id="loginBtn">TIZIMGA KIRISH_</button>
-                <div class="call-center-box">
-                    <span style="font-size: 1.5rem;">📞</span>
-                    <span>Aloqa uchun: +998 50 250 05 60</span>
-                </div>
-                <div style="margin-top: 2rem; width: 100%;">
-                    <button class="btn btn-outline" onclick="showPage('adminLoginPage')" style="width: 100%; border-color: var(--secondary); color: var(--secondary); letter-spacing: 5px; font-weight: 800; text-shadow: 0 0 10px var(--secondary);">ADMIN PANEL_</button>
-                </div>
+        <div class="login-right">
+            <div class="logo-big">VIDEO<br>DARSLIK</div>
+            <p
+                style="font-size: 1.2rem; color: #fff; margin-bottom: 20px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace;">
+                Ro'yxatdan O'tish</p>
+            <input type="text" id="nameInput" class="old-input" placeholder="ISM VA FAMILIYANGIZ" autocomplete="off">
+            <button class="old-btn" id="loginBtn">TIZIMGA KIRISH_</button>
+            <div class="call-center-box">
+                <span style="font-size: 1.5rem;">📞</span>
+                <span>Aloqa uchun: +998 50 250 05 60</span>
             </div>
+            <div style="margin-top: 2rem; width: 100%;">
+                <button class="btn btn-outline" onclick="showPage('adminLoginPage')"
+                    style="width: 100%; border-color: var(--secondary); color: var(--secondary); letter-spacing: 5px; font-weight: 800; text-shadow: 0 0 10px var(--secondary);">ADMIN
+                    PANEL_</button>
+            </div>
+        </div>
     </section>
 
     <!-- Container -->
@@ -61,8 +67,10 @@
         <section id="lessonPage" class="page">
             <div class="card">
                 <h2 id="lessonTitle" style="margin-bottom: 1.5rem; color: var(--primary);"></h2>
-                <div style="position: relative; padding-bottom: 56.25%; height: 0; background: #000; border: 1px solid var(--primary-glow);">
-                    <iframe id="lessonVideo" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" frameborder="0" allowfullscreen></iframe>
+                <div
+                    style="position: relative; padding-bottom: 56.25%; height: 0; background: #000; border: 1px solid var(--primary-glow);">
+                    <iframe id="lessonVideo" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+                        frameborder="0" allowfullscreen></iframe>
                 </div>
                 <div style="margin-top: 2rem; display: flex; gap: 1rem;">
                     <button class="btn btn-primary" onclick="startTest()">IMTIHONNI BOSHLASH</button>
@@ -82,7 +90,8 @@
                 </div>
                 <div class="terminal-body">
                     <div id="testContent"></div>
-                    <button class="btn btn-primary" onclick="submitTest()" style="margin-top: 1rem;">NATIJANI TEKSHIRISH</button>
+                    <button class="btn btn-primary" onclick="submitTest()" style="margin-top: 1rem;">NATIJANI
+                        TEKSHIRISH</button>
                 </div>
             </div>
         </section>
@@ -90,7 +99,8 @@
         <!-- Result Page -->
         <section id="resultPage" class="page">
             <div class="card" style="text-align: center;">
-                <div id="resultPercent" style="font-size: 5rem; font-weight: 800; color: var(--primary); margin-bottom: 1rem;">0%</div>
+                <div id="resultPercent"
+                    style="font-size: 5rem; font-weight: 800; color: var(--primary); margin-bottom: 1rem;">0%</div>
                 <h2 id="resultMsg" style="margin-bottom: 2rem;"></h2>
                 <button class="btn btn-primary" id="resultActionBtn"></button>
             </div>
@@ -99,13 +109,17 @@
         <!-- Profile Page -->
         <section id="profilePage" class="page">
             <div class="card" style="display: flex; gap: 2rem; align-items: center;">
-                <div style="width: 100px; height: 100px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3rem;">🕵️</div>
+                <div
+                    style="width: 100px; height: 100px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3rem;">
+                    🕵️</div>
                 <div>
                     <h2 id="profileName" style="color: #fff;"></h2>
                     <p id="profileProgressText" style="color: var(--primary); font-weight: 700;"></p>
                 </div>
             </div>
-            <h3 style="margin: 2rem 0 1rem; color: var(--secondary); border-bottom: 1px solid var(--secondary); padding-bottom: 0.5rem;">YUTUQLAR VA SERTIFIKATLAR</h3>
+            <h3
+                style="margin: 2rem 0 1rem; color: var(--secondary); border-bottom: 1px solid var(--secondary); padding-bottom: 0.5rem;">
+                YUTUQLAR VA SERTIFIKATLAR</h3>
             <div id="profileCertificates"></div>
         </section>
 
@@ -124,7 +138,8 @@
                     </div>
                     <div style="display: flex; gap: 1rem;">
                         <button class="btn btn-primary" id="encryptBtn">SHIFRLASH</button>
-                        <button class="btn btn-outline" id="decryptBtn" style="border-color: var(--accent); color: var(--accent);">DESHIFRLASH</button>
+                        <button class="btn btn-outline" id="decryptBtn"
+                            style="border-color: var(--accent); color: var(--accent);">DESHIFRLASH</button>
                         <button class="btn btn-outline" id="clearCipherBtn">TOZALASH</button>
                     </div>
                     <div style="margin-top: 1rem;">
@@ -174,17 +189,19 @@
             <div class="admin-login-card">
                 <div class="admin-icon">🔐</div>
                 <h2 class="admin-login-title">ADMIN TERMINAL</h2>
-                <p style="color: var(--secondary); font-size: 0.8rem; margin-bottom: 2rem; letter-spacing: 3px;">AUTHORIZED PERSONNEL ONLY</p>
-                
+                <p style="color: var(--secondary); font-size: 0.8rem; margin-bottom: 2rem; letter-spacing: 3px;">
+                    AUTHORIZED PERSONNEL ONLY</p>
+
                 <div class="admin-input-group">
                     <input type="text" id="adminUser" class="admin-input" placeholder="ACCESS_ID" autocomplete="off">
                     <input type="password" id="adminPass" class="admin-input" placeholder="PASSCODE">
                 </div>
-                
+
                 <button class="admin-btn" id="adminLoginBtn">INITIATE SESSION_</button>
-                
+
                 <div style="margin-top: 2rem;">
-                    <button class="btn btn-outline" style="font-size: 0.7rem; border-color: #444; color: #666;" data-page="loginPage">EXIT TO USER_MODE</button>
+                    <button class="btn btn-outline" style="font-size: 0.7rem; border-color: #444; color: #666;"
+                        data-page="loginPage">EXIT TO USER_MODE</button>
                 </div>
             </div>
         </section>
@@ -199,7 +216,7 @@
                     <button class="btn btn-primary" onclick="openModuleModal()">YANGI DARS +</button>
                 </div>
             </div>
-            
+
             <div id="adminModulesList" class="admin-view-section">
                 <!-- Modules Table will be here -->
             </div>
@@ -222,14 +239,16 @@
         </section>
 
         <!-- Module Modal (Add/Edit) -->
-        <div id="moduleModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
+        <div id="moduleModal" class="modal"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
             <div class="card" style="width: 90%; max-width: 600px;">
                 <h3 id="modalTitle" style="color: var(--primary); margin-bottom: 1.5rem;">DARS TAHRIRLASH</h3>
                 <input type="hidden" id="editModuleId">
                 <div style="display: grid; gap: 1rem;">
                     <input type="text" id="modTitle" class="input-field" placeholder="Dars sarlavhasi">
                     <input type="text" id="modVideo" class="input-field" placeholder="YouTube Video Link">
-                    <textarea id="modDesc" class="input-field" placeholder="Dars tavsifi" style="height: 100px; resize: none;"></textarea>
+                    <textarea id="modDesc" class="input-field" placeholder="Dars tavsifi"
+                        style="height: 100px; resize: none;"></textarea>
                 </div>
                 <div style="margin-top: 2rem; display: flex; gap: 1rem;">
                     <button class="btn btn-primary" onclick="saveModule()">SAQLASH</button>
@@ -239,11 +258,13 @@
         </div>
 
         <!-- Question Manager Modal -->
-        <div id="testManagerModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
+        <div id="testManagerModal" class="modal"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
             <div class="card" style="width: 95%; max-width: 800px; max-height: 90vh; overflow-y: auto;">
                 <h3 style="color: var(--primary); margin-bottom: 1.5rem;">TESTLARNI BOSHQARISH</h3>
                 <div id="questionsList"></div>
-                <button class="btn btn-outline" onclick="addQuestion()" style="width: 100%; margin: 1rem 0;">YANGI SAVOL QO'SHISH +</button>
+                <button class="btn btn-outline" onclick="addQuestion()" style="width: 100%; margin: 1rem 0;">YANGI SAVOL
+                    QO'SHISH +</button>
                 <div style="margin-top: 2rem; display: flex; gap: 1rem;">
                     <button class="btn btn-primary" onclick="saveTests()">BARCHASINI SAQLASH</button>
                     <button class="btn btn-outline" onclick="closeTestManager()">YOPISH</button>
@@ -256,4 +277,5 @@
     <!-- Main Script -->
     <script type="module" src="assets/js/main.js"></script>
 </body>
+
 </html>
