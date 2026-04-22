@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIDEO DARSLIK | Professional Ta'lim Platformasi</title>
+    
+    <!-- Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <a class="nav-logo" data-page="dashboardPage">VIDEO DARSLIK</a>
+        <ul class="nav-links">
+            <li class="nav-item" data-page="dashboardPage">Darslar</li>
+            <li class="nav-item" data-page="cipherPage">Kriptografiya</li>
+            <li class="nav-item" data-page="profilePage">Profil</li>
+            <li class="nav-item" id="logoutBtn" style="color: var(--accent);">Chiqish</li>
+        </ul>
+    </nav>
+
+    <!-- Login Page -->
+    <section id="loginPage" class="page active">
+        <div class="login-left">
+            <div class="mobile-frame">
+                <img src="assets/img/treyler.png" alt="Promo">
+            </div>
+        </div>
+            <div class="login-right">
+                <div class="logo-big">VIDEO<br>DARSLIK</div>
+                <p style="font-size: 1.2rem; color: #fff; margin-bottom: 20px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace;">Ro'yxatdan O'tish</p>
+                <input type="text" id="nameInput" class="old-input" placeholder="ISM VA FAMILIYANGIZ" autocomplete="off">
+                <button class="old-btn" id="loginBtn">TIZIMGA KIRISH_</button>
+                <div class="call-center-box">
+                    <span style="font-size: 1.5rem;">📞</span>
+                    <span>Aloqa uchun: +998 50 250 05 60</span>
+                </div>
+                <div style="margin-top: 2rem; width: 100%;">
+                    <button class="btn btn-outline" onclick="showPage('adminLoginPage')" style="width: 100%; border-color: var(--secondary); color: var(--secondary); letter-spacing: 5px; font-weight: 800; text-shadow: 0 0 10px var(--secondary);">ADMIN PANEL_</button>
+                </div>
+            </div>
+    </section>
+
+    <!-- Container -->
+    <div class="container">
+
+        <!-- Dashboard Page -->
+        <section id="dashboardPage" class="page">
+            <h2 id="welcomeMsg" style="margin-bottom: 2rem; letter-spacing: 2px; color: var(--primary);"></h2>
+            <div class="lesson-grid" id="lessonGrid"></div>
+        </section>
+
+        <!-- Lesson View Page -->
+        <section id="lessonPage" class="page">
+            <div class="card">
+                <h2 id="lessonTitle" style="margin-bottom: 1.5rem; color: var(--primary);"></h2>
+                <div style="position: relative; padding-bottom: 56.25%; height: 0; background: #000; border: 1px solid var(--primary-glow);">
+                    <iframe id="lessonVideo" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" frameborder="0" allowfullscreen></iframe>
+                </div>
+                <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                    <button class="btn btn-primary" onclick="startTest()">IMTIHONNI BOSHLASH</button>
+                    <button class="btn btn-outline" data-page="dashboardPage">ORQAGA</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Test Page -->
+        <section id="testPage" class="page">
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <div class="dot dot-red"></div>
+                    <div class="dot dot-yellow"></div>
+                    <div class="dot dot-green"></div>
+                    <span style="font-size: 0.7rem; margin-left: 1rem; color: #666;">TERMINAL / EXAM_MODE</span>
+                </div>
+                <div class="terminal-body">
+                    <div id="testContent"></div>
+                    <button class="btn btn-primary" onclick="submitTest()" style="margin-top: 1rem;">NATIJANI TEKSHIRISH</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Result Page -->
+        <section id="resultPage" class="page">
+            <div class="card" style="text-align: center;">
+                <div id="resultPercent" style="font-size: 5rem; font-weight: 800; color: var(--primary); margin-bottom: 1rem;">0%</div>
+                <h2 id="resultMsg" style="margin-bottom: 2rem;"></h2>
+                <button class="btn btn-primary" id="resultActionBtn"></button>
+            </div>
+        </section>
+
+        <!-- Profile Page -->
+        <section id="profilePage" class="page">
+            <div class="card" style="display: flex; gap: 2rem; align-items: center;">
+                <div style="width: 100px; height: 100px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3rem;">🕵️</div>
+                <div>
+                    <h2 id="profileName" style="color: #fff;"></h2>
+                    <p id="profileProgressText" style="color: var(--primary); font-weight: 700;"></p>
+                </div>
+            </div>
+            <h3 style="margin: 2rem 0 1rem; color: var(--secondary); border-bottom: 1px solid var(--secondary); padding-bottom: 0.5rem;">YUTUQLAR VA SERTIFIKATLAR</h3>
+            <div id="profileCertificates"></div>
+        </section>
+
+        <!-- Cipher Page -->
+        <section id="cipherPage" class="page">
+            <div class="card">
+                <h2 style="color: var(--primary); margin-bottom: 1.5rem;">VIGENÈRE CIPHER TERMINAL</h2>
+                <div style="display: grid; gap: 1rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem;">MATN (TI / CI):</label>
+                        <input type="text" id="cipherIn" class="input-field" placeholder="Xabarni kiriting...">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem;">KALIT (GI):</label>
+                        <input type="text" id="cipherKey" class="input-field" placeholder="Kalit so'z...">
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn btn-primary" id="encryptBtn">SHIFRLASH</button>
+                        <button class="btn btn-outline" id="decryptBtn" style="border-color: var(--accent); color: var(--accent);">DESHIFRLASH</button>
+                        <button class="btn btn-outline" id="clearCipherBtn">TOZALASH</button>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem;">NATIJA:</label>
+                        <div style="display: flex; gap: 1rem;">
+                            <input type="text" id="cipherOut" class="input-field" readonly style="margin-bottom: 0;">
+                            <button class="btn btn-primary" id="copyCipherBtn">NUSXA</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="cipherTableBox" style="margin-top: 2rem; overflow-x: auto;"></div>
+            </div>
+        </section>
+
+        <!-- Certificate View Page -->
+        <section id="certificatePage" class="page">
+            <div id="certToExport" class="cert-preview">
+                <div class="cert-title">SERTIFIKAT</div>
+                <p style="font-size: 1.2rem; letter-spacing: 2px;">USHBU RASMIY HUJJAT TASDIQLAYDIKI</p>
+                <div id="certNameDisplay" class="cert-name">FOYDALANUVCHI</div>
+                <p style="max-width: 700px; margin: 0 auto; line-height: 1.8;">
+                    VIDEO DARSLIK tomonidan tashkil etilgan maxsus <br>
+                    <strong>"KIBERXAVFSIZLIK VA ETIK HACKING"</strong> o'quv dasturining <br>
+                    barcha bosqichlarini muvaffaqiyatli tamomladi.
+                </p>
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 3rem;">
+                    <div id="certQR" style="background: #fff; padding: 10px; border-radius: 5px;"></div>
+                    <div style="text-align: center;">
+                        <img src="assets/img/logo.png" alt="Logo" style="width: 100px; margin-bottom: 1rem;">
+                        <div style="border-top: 1px solid #fff; padding-top: 0.5rem;">VIDEO DARSLIK SEAL</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <p style="font-family: cursive; font-size: 2rem; color: var(--gold);">Sirojiddin Savriyev</p>
+                        <div style="border-top: 1px solid #fff; width: 200px; margin: 0.5rem 0 0.5rem auto;"></div>
+                        <p id="certDate"></p>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
+                <button class="btn btn-primary" onclick="downloadPDF()">PDF YUKLAB OLISH</button>
+                <button class="btn btn-outline" data-page="profilePage">ORQAGA</button>
+            </div>
+        </section>
+
+        <!-- Admin Login Page -->
+        <section id="adminLoginPage" class="page admin-login-bg">
+            <div class="admin-login-card">
+                <div class="admin-icon">🔐</div>
+                <h2 class="admin-login-title">ADMIN TERMINAL</h2>
+                <p style="color: var(--secondary); font-size: 0.8rem; margin-bottom: 2rem; letter-spacing: 3px;">AUTHORIZED PERSONNEL ONLY</p>
+                
+                <div class="admin-input-group">
+                    <input type="text" id="adminUser" class="admin-input" placeholder="ACCESS_ID" autocomplete="off">
+                    <input type="password" id="adminPass" class="admin-input" placeholder="PASSCODE">
+                </div>
+                
+                <button class="admin-btn" id="adminLoginBtn">INITIATE SESSION_</button>
+                
+                <div style="margin-top: 2rem;">
+                    <button class="btn btn-outline" style="font-size: 0.7rem; border-color: #444; color: #666;" data-page="loginPage">EXIT TO USER_MODE</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin Dashboard Page -->
+        <section id="adminDashboardPage" class="page">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="color: var(--primary);">BOSHQARUV PANELI</h2>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="btn btn-outline" onclick="toggleAdminView('modules')">DARSLAR</button>
+                    <button class="btn btn-outline" onclick="toggleAdminView('users')">FOYDALANUVCHILAR</button>
+                    <button class="btn btn-primary" onclick="openModuleModal()">YANGI DARS +</button>
+                </div>
+            </div>
+            
+            <div id="adminModulesList" class="admin-view-section">
+                <!-- Modules Table will be here -->
+            </div>
+
+            <div id="adminUsersList" class="admin-view-section" style="display:none;">
+                <div class="card" style="padding: 0; overflow: hidden;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>FOYDALANUVCHI</th>
+                                <th>DARS KURILDI</th>
+                                <th>TESTLAR</th>
+                                <th style="text-align: center;">AMAL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userStatsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module Modal (Add/Edit) -->
+        <div id="moduleModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
+            <div class="card" style="width: 90%; max-width: 600px;">
+                <h3 id="modalTitle" style="color: var(--primary); margin-bottom: 1.5rem;">DARS TAHRIRLASH</h3>
+                <input type="hidden" id="editModuleId">
+                <div style="display: grid; gap: 1rem;">
+                    <input type="text" id="modTitle" class="input-field" placeholder="Dars sarlavhasi">
+                    <input type="text" id="modVideo" class="input-field" placeholder="YouTube Video Link">
+                    <textarea id="modDesc" class="input-field" placeholder="Dars tavsifi" style="height: 100px; resize: none;"></textarea>
+                </div>
+                <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                    <button class="btn btn-primary" onclick="saveModule()">SAQLASH</button>
+                    <button class="btn btn-outline" onclick="closeModuleModal()">BEKOR QILISH</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Question Manager Modal -->
+        <div id="testManagerModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
+            <div class="card" style="width: 95%; max-width: 800px; max-height: 90vh; overflow-y: auto;">
+                <h3 style="color: var(--primary); margin-bottom: 1.5rem;">TESTLARNI BOSHQARISH</h3>
+                <div id="questionsList"></div>
+                <button class="btn btn-outline" onclick="addQuestion()" style="width: 100%; margin: 1rem 0;">YANGI SAVOL QO'SHISH +</button>
+                <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                    <button class="btn btn-primary" onclick="saveTests()">BARCHASINI SAQLASH</button>
+                    <button class="btn btn-outline" onclick="closeTestManager()">YOPISH</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Main Script -->
+    <script type="module" src="assets/js/main.js"></script>
+</body>
+</html>
