@@ -7,7 +7,7 @@ try {
     const savedDarslar = localStorage.getItem('vd_darslar');
     if (savedDarslar) {
         darslar = JSON.parse(savedDarslar);
-        if (darslar.length < defaultDarslar.length) {
+        if (darslar.length !== defaultDarslar.length) {
             darslar = defaultDarslar;
             localStorage.setItem('vd_darslar', JSON.stringify(darslar));
             localStorage.setItem('vd_testlar', JSON.stringify(defaultTestlar));
