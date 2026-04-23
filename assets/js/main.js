@@ -18,21 +18,65 @@ const firebaseConfig = {
 
 let db;
 if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+    // Improved Mock DB for Local Testing
+    const getMockData = () => JSON.parse(localStorage.getItem('cyber_mock_db') || '{}');
+    const saveMockData = (data) => localStorage.setItem('cyber_mock_db', JSON.stringify(data));
+
     db = {
         ref: (path) => ({
             on: (event, callback) => {
-                const data = JSON.parse(localStorage.getItem('mock_db_' + path) || '{}');
-                callback({ val: () => data });
+                const data = getMockData();
+                const parts = path.split('/');
+                let target = data;
+                for (const p of parts) if (p) target = target[p] || {};
+                callback({ val: () => (Object.keys(target).length === 0 ? null : target) });
             },
-            set: (data) => localStorage.setItem('mock_db_' + path, JSON.stringify(data)),
-            update: (data) => {
-                const current = JSON.parse(localStorage.getItem('mock_db_' + path) || '{}');
-                localStorage.setItem('mock_db_' + path, JSON.stringify({ ...current, ...data }));
+            set: (val) => {
+                const data = getMockData();
+                const parts = path.split('/');
+                let curr = data;
+                for (let i = 0; i < parts.length - 1; i++) {
+                    if (parts[i]) {
+                        if (!curr[parts[i]]) curr[parts[i]] = {};
+                        curr = curr[parts[i]];
+                    }
+                }
+                curr[parts[parts.length - 1]] = val;
+                saveMockData(data);
+                return Promise.resolve();
             },
-            remove: () => localStorage.removeItem('mock_db_' + path),
+            update: (val) => {
+                const data = getMockData();
+                const parts = path.split('/');
+                let curr = data;
+                for (let i = 0; i < parts.length - 1; i++) {
+                    if (parts[i]) {
+                        if (!curr[parts[i]]) curr[parts[i]] = {};
+                        curr = curr[parts[i]];
+                    }
+                }
+                const key = parts[parts.length - 1];
+                curr[key] = { ...curr[key], ...val };
+                saveMockData(data);
+                return Promise.resolve();
+            },
+            remove: () => {
+                const data = getMockData();
+                const parts = path.split('/');
+                let curr = data;
+                for (let i = 0; i < parts.length - 1; i++) {
+                    if (parts[i]) curr = curr[parts[i]];
+                }
+                delete curr[parts[parts.length - 1]];
+                saveMockData(data);
+                return Promise.resolve();
+            },
             once: (event, callback) => {
-                const data = JSON.parse(localStorage.getItem('mock_db_' + path) || '{}');
-                callback({ val: () => data });
+                const data = getMockData();
+                const parts = path.split('/');
+                let target = data;
+                for (const p of parts) if (p) target = target[p] || {};
+                callback({ val: () => (Object.keys(target).length === 0 ? null : target) });
             }
         })
     };
@@ -519,6 +563,12 @@ function renderDashboard() {
         if (!isLocked) card.onclick = () => { joriyDars = d; showPage('lessonPage'); document.getElementById('lessonTitle').innerText = d.t; document.getElementById('lessonVideo').src = `https://www.youtube.com/embed/${vId}?autoplay=1`; };
         grid.appendChild(card);
     });
+}
+
+window.deleteUser = function(id) {
+    if (confirm("Ushbu foydalanuvchini o'chirmoqchimisiz?")) {
+        db.ref('users/' + id).remove().then(() => alert("O'chirildi!"));
+    }
 }
 
 function logout() {
