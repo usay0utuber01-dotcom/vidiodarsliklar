@@ -50,8 +50,19 @@ let activeCompetition = null;
 
 function init() {
     setupEventListeners();
-    if (foydalanuvchi) syncUserSession();
-    else showPage('loginPage');
+    
+    const savedAdmin = localStorage.getItem('vd_admin') === 'true';
+    const savedPage = localStorage.getItem('cyber_active_page');
+
+    if (savedAdmin) {
+        isAdmin = true;
+        showPage(savedPage || 'adminDashboardPage');
+    } else if (foydalanuvchi) {
+        syncUserSession();
+        showPage(savedPage || 'dashboardPage');
+    } else {
+        showPage('loginPage');
+    }
     
     // Listen for global competition status
     db.ref('competition').on('value', (snapshot) => {
@@ -150,6 +161,7 @@ function showPage(id) {
         if (id === 'compAuthPage') renderCompAuthPage();
         if (id === 'profilePage') renderProfile();
         
+        localStorage.setItem('cyber_active_page', id);
         window.scrollTo(0, 0);
     }
 }
@@ -244,7 +256,7 @@ function adminLogin() {
     const p = document.getElementById('adminPass').value;
     if (u === 'xujaqulov01' && p === 'admin777') {
         isAdmin = true;
-        sessionStorage.setItem('vd_admin', 'true');
+        localStorage.setItem('vd_admin', 'true');
         showPage('adminDashboardPage');
     } else alert("Xato!");
 }
@@ -505,7 +517,8 @@ function renderDashboard() {
 
 function logout() {
     localStorage.removeItem('cyber_user_session');
-    sessionStorage.removeItem('vd_admin');
+    localStorage.removeItem('vd_admin');
+    localStorage.removeItem('cyber_active_page');
     isAdmin = false;
     location.reload();
 }
