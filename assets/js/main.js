@@ -43,7 +43,7 @@ if (firebaseConfig.apiKey === "YOUR_API_KEY") {
 
 // State
 let foydalanuvchi = JSON.parse(localStorage.getItem('cyber_user_session')) || null;
-let isAdmin = sessionStorage.getItem('vd_admin') === 'true';
+let isAdmin = localStorage.getItem('vd_admin') === 'true';
 let joriyDars = null;
 let joriyTestTuri = 'lesson'; 
 let activeCompetition = null;
@@ -116,16 +116,22 @@ function login() {
             foydalanuvchi = { id: userId, ...user };
             localStorage.setItem('cyber_user_session', JSON.stringify(foydalanuvchi));
             syncUserSession();
+            showPage('dashboardPage');
         } else alert("Xato!");
     });
 }
 
 function syncUserSession() {
+    if (!foydalanuvchi) return;
     db.ref('users/' + foydalanuvchi.id).on('value', (snapshot) => {
         const data = snapshot.val();
-        if (data) { foydalanuvchi = { id: foydalanuvchi.id, ...data }; updateUI(); }
+        if (data) { 
+            foydalanuvchi = { id: foydalanuvchi.id, ...data }; 
+            updateUI(); 
+            // Update local storage too to keep it fresh
+            localStorage.setItem('cyber_user_session', JSON.stringify(foydalanuvchi));
+        }
     });
-    showPage('dashboardPage');
 }
 
 function updateUI() {
