@@ -422,6 +422,62 @@ body {
     box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
 }
 
+/* Auth Tabs */
+.auth-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    width: 320px;
+}
+
+.auth-tab {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--glass-border);
+    color: var(--text-dim);
+    padding: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.auth-tab.active {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(0, 255, 65, 0.05);
+}
+
+/* Leaderboard */
+.leaderboard-table th, .leaderboard-table td {
+    padding: 1rem;
+    text-align: center;
+}
+
+.rank-1 { color: var(--gold); font-weight: 800; font-size: 1.2rem; }
+.rank-2 { color: #C0C0C0; font-weight: 700; }
+.rank-3 { color: #CD7F32; font-weight: 700; }
+
+.crown {
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.ticket-badge {
+    background: var(--gold);
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 800;
+    font-size: 0.8rem;
+}
+
+/* Competition Card */
+.comp-card {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), transparent);
+    border: 1px solid var(--gold);
+}
+
 /* Dashboard Grid */
 .lesson-grid {
     display: grid;

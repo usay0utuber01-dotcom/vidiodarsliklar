@@ -10,6 +10,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
     <!-- Styles -->
     <link rel="stylesheet" href="assets/css/style.css">
@@ -69,11 +74,26 @@
         </div>
         <div class="login-right">
             <div class="logo-big">VIDEO<br>DARSLIK</div>
-            <p
-                style="font-size: 1.2rem; color: #fff; margin-bottom: 20px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace;">
-                Ro'yxatdan O'tish</p>
-            <input type="text" id="nameInput" class="old-input" placeholder="ISM VA FAMILIYANGIZ" autocomplete="off">
-            <button class="old-btn" id="loginBtn">TIZIMGA KIRISH_</button>
+            
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tabLogin" onclick="switchAuth('login')">KIRISH</button>
+                <button class="auth-tab" id="tabRegister" onclick="switchAuth('register')">RO'YXATDAN O'TISH</button>
+            </div>
+
+            <div id="loginForm">
+                <input type="text" id="loginFirst" class="old-input" placeholder="ISMINGIZ" autocomplete="off">
+                <input type="text" id="loginLast" class="old-input" placeholder="FAMILIYANGIZ" autocomplete="off">
+                <input type="password" id="loginCode" class="old-input" placeholder="4 XONALI KOD" maxlength="4">
+                <button class="old-btn" id="loginBtn">TIZIMGA KIRISH_</button>
+            </div>
+
+            <div id="registerForm" style="display: none;">
+                <input type="text" id="regFirst" class="old-input" placeholder="ISMINGIZ" autocomplete="off">
+                <input type="text" id="regLast" class="old-input" placeholder="FAMILIYANGIZ" autocomplete="off">
+                <input type="password" id="regCode" class="old-input" placeholder="YANGI 4 XONALI KOD" maxlength="4">
+                <button class="old-btn" id="registerBtn">RO'YXATDAN O'TISH_</button>
+            </div>
+
             <div class="call-center-box">
                 <span style="font-size: 1.5rem;">📞</span>
                 <span>Aloqa uchun: +998 50 250 05 60</span>
@@ -242,9 +262,10 @@
         <section id="adminDashboardPage" class="page">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
                 <h2 style="color: var(--primary);">BOSHQARUV PANELI</h2>
-                <div style="display: flex; gap: 1rem;">
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                     <button class="btn btn-outline" onclick="toggleAdminView('modules')">DARSLAR</button>
                     <button class="btn btn-outline" onclick="toggleAdminView('users')">FOYDALANUVCHILAR</button>
+                    <button class="btn btn-outline" onclick="toggleAdminView('leaderboard')" style="border-color: var(--gold); color: var(--gold);">BELLASHUV JADVALI</button>
                     <button class="btn btn-primary" onclick="openModuleModal()">YANGI DARS +</button>
                 </div>
             </div>
@@ -259,12 +280,43 @@
                         <thead>
                             <tr>
                                 <th>FOYDALANUVCHI</th>
-                                <th>DARS KURILDI</th>
+                                <th>DARS KO'RILDI</th>
                                 <th>TESTLAR</th>
                                 <th style="text-align: center;">AMAL</th>
                             </tr>
                         </thead>
                         <tbody id="userStatsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="adminLeaderboard" class="admin-view-section" style="display:none;">
+                <div class="card" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4);">
+                    <div>
+                        <h3 style="color: var(--gold);">BELLASHUV BOSHQARUVI</h3>
+                        <p style="font-size: 0.8rem; color: #888;">Barcha talabalarga biletlarni tasodifiy tarqatish va natijalarni kuzatish.</p>
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn btn-primary" onclick="distributeTickets()" style="background: var(--gold); color: #000;">BILET TARQATISH_</button>
+                        <button class="btn btn-outline" onclick="exportToExcel()" style="border-color: #2ecc71; color: #2ecc71;">EXCELGA SAQLASH_</button>
+                        <button class="btn btn-outline" onclick="clearLeaderboard()" style="border-color: var(--accent); color: var(--accent);">JADVALNI TOZALASH_</button>
+                    </div>
+                </div>
+                <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--gold);">
+                    <table class="admin-table leaderboard-table" id="leaderboardTableMain">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">O'RIN</th>
+                                <th>FOYDALANUVCHI</th>
+                                <th>BILET #</th>
+                                <th>TO'G'RI</th>
+                                <th>XATO</th>
+                                <th>VAQT</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboardBody">
+                            <!-- Real-time data will be here -->
+                        </tbody>
                     </table>
                 </div>
             </div>

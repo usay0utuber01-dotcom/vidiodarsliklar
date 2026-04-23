@@ -95,51 +95,50 @@ export const testlar = {
     1: [
         { q: "Oliy ta'limda videodarslarning asosiy maqsadi nima?", a: ["Vaqtni tejash", "Bilim olish samaradorligini oshirish", "Faqat ko'ngilochar bo'lish"], c: "Bilim olish samaradorligini oshirish" },
         { q: "Videodarslarning bugungi kundagi ahamiyati nimada?", a: ["An'anaviy ta'limni butkul yo'qotish", "Mustaqil ta'lim olish imkoniyatini yaratish", "Kitob o'rnini bosish"], c: "Mustaqil ta'lim olish imkoniyatini yaratish" },
-        { q: "Videodarslar talabalar uchun qanday qulaylik yaratadi?", a: ["Istalgan vaqtda qayta ko'rish", "Hech narsa o'qimaslik", "Imtihondan avtomatik o'tish"], c: "Istalgan vaqtda qayta ko'rish" }
+        { q: "Videodarslar talabalar uchun qanday qulaylik yaratadi?", a: ["Istalgan vaqtda qayta ko'rish", "Hech narsa o'qimaslik", "Imtihondan avtomatik o'tish"], c: "Istalgan vaqtda qayta ko'rish" },
+        { q: "Masofaviy ta'limda videodarslar nima vazifani bajaradi?", a: ["Aloqa vositasi", "Asosiy o'quv resursi", "Faqat reklamalar"], c: "Asosiy o'quv resursi" },
+        { q: "Videodars orqali bilim olishning afzalligi?", a: ["Tezroq tugatish", "Vizual va audio orqali yaxshi eslab qolish", "Hech qanday afzalligi yo'q"], c: "Vizual va audio orqali yaxshi eslab qolish" },
+        { q: "O'qituvchi uchun videodarsning foydasi?", a: ["Dars o'tmaslik", "Mavzuni bir marta sifatli yozib ko'p marta foydalanish", "Talabalarni qiynash"], c: "Mavzuni bir marta sifatli yozib ko'p marta foydalanish" },
+        { q: "Zamonaviy ta'limda videodarslar qanday bo'lishi kerak?", a: ["Uzun va zerikarli", "Interaktiv va qisqa", "Faqat matndan iborat"], c: "Interaktiv va qisqa" },
+        { q: "Videodarslar qaysi yoshdagilar uchun qulay?", a: ["Faqat bolalar", "Barcha yoshdagi o'quvchilar", "Faqat qariyalar"], c: "Barcha yoshdagi o'quvchilar" },
+        { q: "Sifatli videodarsning belgisi?", a: ["Rangli bo'lishi", "Aniqlik, tushunarlilik va metodik asoslanganlik", "Musiqa ko'pligi"], c: "Aniqlik, tushunarlilik va metodik asoslanganlik" },
+        { q: "Videodarslar ta'lim sifatini qanday oshiradi?", a: ["O'quvchini majburlash orqali", "Bilimlarni mustahkamlash va takrorlash imkoniyati bilan", "Faqat baho qo'yish orqali"], c: "Bilimlarni mustahkamlash va takrorlash imkoniyati bilan" }
     ],
     2: [
         { q: "Masofaviy ta'limda videodarslarning roli qanday?", a: ["Ikkinchi darajali", "Asosiy bilim manbai", "Faqat qo'shimcha"], c: "Asosiy bilim manbai" },
-        { q: "Dual ta'lim nima?", a: ["Faqat nazariya", "Nazariya va amaliyot uyg'unligi", "Faqat uyda o'qish"], c: "Nazariya va amaliyot uyg'unligi" }
+        { q: "Dual ta'lim nima?", a: ["Faqat nazariya", "Nazariya va amaliyot uyg'unligi", "Faqat uyda o'qish"], c: "Nazariya va amaliyot uyg'unligi" },
+        { q: "LMS tizimlarida video qanday formatda bo'lishi kerak?", a: ["Faqat .exe", "MP4 yoki WebM", "Faqat .txt"], c: "MP4 yoki WebM" },
+        { q: "Videodarslarni masofadan uzatish uchun eng yaxshi usul?", a: ["Elektron pochta", "Video xostinglar (YouTube, Vimeo)", "Fleshka"], c: "Video xostinglar (YouTube, Vimeo)" },
+        { q: "Masofaviy ta'limning texnik asosi nima?", a: ["Kitob", "Internet va AKT", "Ruchka"], c: "Internet va AKT" },
+        { q: "Dual ta'limda videoning afzalligi?", a: ["Amaliy jarayonlarni vizual ko'rsatish", "Vaqtni cho'zish", "Hech narsa"], c: "Amaliy jarayonlarni vizual ko'rsatish" },
+        { q: "Videoaloqa uchun qaysi dastur mashhur?", a: ["Paint", "Zoom/Teams", "Word"], c: "Zoom/Teams" },
+        { q: "Elektron o'quv resurslari nima?", a: ["Faqat video", "Raqamli ko'rinishdagi barcha o'quv materiallari", "Faqat rasm"], c: "Raqamli ko'rinishdagi barcha o'quv materiallari" },
+        { q: "Masofaviy ta'limda teskari aloqa qanday amalga oshadi?", a: ["Faqat telefon", "Chat, forum va testlar orqali", "Amalga oshmaydi"], c: "Chat, forum va testlar orqali" },
+        { q: "Videodarslarni yaratishda nimalarga e'tibor berish kerak?", a: ["Faqat narxga", "Mavzuning to'liq yoritilishi va texnik sifatga", "Faqat kiyimga"], c: "Mavzuning to'liq yoritilishi va texnik sifatga" }
     ],
-    3: [
-        { q: "Videodars tayyorlashda pedagogik mahorat nima uchun kerak?", a: ["Chiroyli ko'rinish uchun", "Ma'lumotni tizimli va tushunarli yetkazish uchun", "Video davomiyligini oshirish uchun"], c: "Ma'lumotni tizimli va tushunarli yetkazish uchun" },
-        { q: "Talabalarning psixologik holati videodarsda qanday hisobga olinadi?", a: ["Diqqatni jamlash vaqtini inobatga olish", "Faqat ranglarga qarash", "Hech qanday ahamiyati yo'q"], c: "Diqqatni jamlash vaqtini inobatga olish" }
-    ],
-    4: [
-        { q: "Videodarslarni yozishning qanday metodikalari bor?", a: ["Faqat ma'ruza", "Interaktiv va ko'rgazmali", "Faqat rasm ko'rsatish"], c: "Interaktiv va ko'rgazmali" }
-    ],
-    5: [
-        { q: "Professional studiyaning afzalligi nimada?", a: ["Qimmatligi", "Sifatli ovoz va yoritish", "Katta xona bo'lishi"], c: "Sifatli ovoz va yoritish" }
-    ],
-    6: [
-        { q: "Videostudiyalar qanday tasniflanadi?", a: ["Katta va kichik", "Professional, havaskor va maxsus", "Ochiq va yopiq"], c: "Professional, havaskor va maxsus" }
-    ],
-    7: [
-        { q: "Post-production jarayoniga nima kiradi?", a: ["Ssenariy yozish", "Montaj va effektlar", "Kamera tanlash"], c: "Montaj va effektlar" }
-    ],
-    8: [
-        { q: "Videodars ssenariysi nima uchun kerak?", a: ["Vaqtni cho'zish uchun", "Darsni reja asosida va tizimli o'tish uchun", "O'qituvchini qiynash uchun"], c: "Darsni reja asosida va tizimli o'tish uchun" }
-    ],
-    9: [
-        { q: "LMS nima?", a: ["Video o'yin", "O'quv jarayonini boshqarish tizimi", "Kompyuter modeli"], c: "O'quv jarayonini boshqarish tizimi" }
-    ],
-    10: [
-        { q: "SWOT tahlilidagi 'S' harfi nimani anglatadi?", a: ["Stratege (Strategiya)", "Strengths (Kuchli tomonlar)", "Speed (Tezlik)"], c: "Strengths (Kuchli tomonlar)" }
-    ],
-    11: [
-        { q: "Bulutli texnologiyalarning afzalligi nima?", a: ["Xavfli bo'lishi", "Ma'lumotlarni istalgan qurilmadan olish imkoniyati", "Faqat bir marta ishlatilishi"], c: "Ma'lumotlarni istalgan qurilmadan olish imkoniyati" }
-    ],
-    12: [
-        { q: "IP manzil nima?", a: ["Tarmoqdagi qurilmaning unikal manzili", "Parol nomi", "Fayl turi"], c: "Tarmoqdagi qurilmaning unikal manzili" }
-    ],
-    13: [
-        { q: "Metodik ta'minot deganda nima tushuniladi?", a: ["Faqat kitoblar", "O'quv dasturlari va metodik qo'llanmalar", "Faqat kompyuterlar"], c: "O'quv dasturlari va metodik qo'llanmalar" }
-    ],
-    14: [
-        { q: "OBS Studio nima uchun ishlatiladi?", a: ["Rasm tahrirlash", "Video yozish va onlayn translyatsiya", "Matn yozish"], c: "Video yozish va onlayn translyatsiya" }
-    ],
-    15: [
-        { q: "Platformadan foydalanishda birinchi qadam nima?", a: ["Video o'chirish", "Ro'yxatdan o'tish yoki tizimga kirish", "Komentariya yozish"], c: "Ro'yxatdan o'tish yoki tizimga kirish" }
-    ]
+    3: [ { q: "3-Dars savoli 1", a: ["A", "B", "C"], c: "A" }, { q: "3-Dars savoli 2", a: ["A", "B", "C"], c: "B" }, { q: "3-Dars savoli 3", a: ["A", "B", "C"], c: "C" }, { q: "3-Dars savoli 4", a: ["A", "B", "C"], c: "A" }, { q: "3-Dars savoli 5", a: ["A", "B", "C"], c: "B" }, { q: "3-Dars savoli 6", a: ["A", "B", "C"], c: "C" }, { q: "3-Dars savoli 7", a: ["A", "B", "C"], c: "A" }, { q: "3-Dars savoli 8", a: ["A", "B", "C"], c: "B" }, { q: "3-Dars savoli 9", a: ["A", "B", "C"], c: "C" }, { q: "3-Dars savoli 10", a: ["A", "B", "C"], c: "A" } ],
+    4: [ { q: "4-Dars savoli 1", a: ["A", "B", "C"], c: "A" }, { q: "4-Dars savoli 2", a: ["A", "B", "C"], c: "B" }, { q: "4-Dars savoli 3", a: ["A", "B", "C"], c: "C" }, { q: "4-Dars savoli 4", a: ["A", "B", "C"], c: "A" }, { q: "4-Dars savoli 5", a: ["A", "B", "C"], c: "B" }, { q: "4-Dars savoli 6", a: ["A", "B", "C"], c: "C" }, { q: "4-Dars savoli 7", a: ["A", "B", "C"], c: "A" }, { q: "4-Dars savoli 8", a: ["A", "B", "C"], c: "B" }, { q: "4-Dars savoli 9", a: ["A", "B", "C"], c: "C" }, { q: "4-Dars savoli 10", a: ["A", "B", "C"], c: "A" } ],
+    5: [ { q: "5-Dars savoli 1", a: ["A", "B", "C"], c: "A" }, { q: "5-Dars savoli 2", a: ["A", "B", "C"], c: "B" }, { q: "5-Dars savoli 3", a: ["A", "B", "C"], c: "C" }, { q: "5-Dars savoli 4", a: ["A", "B", "C"], c: "A" }, { q: "5-Dars savoli 5", a: ["A", "B", "C"], c: "B" }, { q: "5-Dars savoli 6", a: ["A", "B", "C"], c: "C" }, { q: "5-Dars savoli 7", a: ["A", "B", "C"], c: "A" }, { q: "5-Dars savoli 8", a: ["A", "B", "C"], c: "B" }, { q: "5-Dars savoli 9", a: ["A", "B", "C"], c: "C" }, { q: "5-Dars savoli 10", a: ["A", "B", "C"], c: "A" } ],
+    6: [ { q: "6-Dars savoli 1", a: ["A", "B", "C"], c: "A" }, { q: "6-Dars savoli 2", a: ["A", "B", "C"], c: "B" }, { q: "6-Dars savoli 3", a: ["A", "B", "C"], c: "C" }, { q: "6-Dars savoli 4", a: ["A", "B", "C"], c: "A" }, { q: "6-Dars savoli 5", a: ["A", "B", "C"], c: "B" }, { q: "6-Dars savoli 6", a: ["A", "B", "C"], c: "C" }, { q: "6-Dars savoli 7", a: ["A", "B", "C"], c: "A" }, { q: "6-Dars savoli 8", a: ["A", "B", "C"], c: "B" }, { q: "6-Dars savoli 9", a: ["A", "B", "C"], c: "C" }, { q: "6-Dars savoli 10", a: ["A", "B", "C"], c: "A" } ],
+    7: [ { q: "7-Dars savoli 1", a: ["A", "B", "C"], c: "A" }, { q: "7-Dars savoli 2", a: ["A", "B", "C"], c: "B" }, { q: "7-Dars savoli 3", a: ["A", "B", "C"], c: "C" }, { q: "7-Dars savoli 4", a: ["A", "B", "C"], c: "A" }, { q: "7-Dars savoli 5", a: ["A", "B", "C"], c: "B" }, { q: "7-Dars savoli 6", a: ["A", "B", "C"], c: "C" }, { q: "7-Dars savoli 7", a: ["A", "B", "C"], c: "A" }, { q: "7-Dars savoli 8", a: ["A", "B", "C"], c: "B" }, { q: "7-Dars savoli 9", a: ["A", "B", "C"], c: "C" }, { q: "7-Dars savoli 10", a: ["A", "B", "C"], c: "A" } ],
+    8: [ { q: "8-Dars savoli 1", a: ["A", "B", "C"], c: "A" }, { q: "8-Dars savoli 2", a: ["A", "B", "C"], c: "B" }, { q: "8-Dars savoli 3", a: ["A", "B", "C"], c: "C" }, { q: "8-Dars savoli 4", a: ["A", "B", "C"], c: "A" }, { q: "8-Dars savoli 5", a: ["A", "B", "C"], c: "B" }, { q: "8-Dars savoli 6", a: ["A", "B", "C"], c: "C" }, { q: "8-Dars savoli 7", a: ["A", "B", "C"], c: "A" }, { q: "8-Dars savoli 8", a: ["A", "B", "C"], c: "B" }, { q: "8-Dars savoli 9", a: ["A", "B", "C"], c: "C" }, { q: "8-Dars savoli 10", a: ["A", "B", "C"], c: "A" } ],
+    9: [ { q: "9-Dars savoli 1", a: ["A", "B", "C"], c: "A" }, { q: "9-Dars savoli 2", a: ["A", "B", "C"], c: "B" }, { q: "9-Dars savoli 3", a: ["A", "B", "C"], c: "C" }, { q: "9-Dars savoli 4", a: ["A", "B", "C"], c: "A" }, { q: "9-Dars savoli 5", a: ["A", "B", "C"], c: "B" }, { q: "9-Dars savoli 6", a: ["A", "B", "C"], c: "C" }, { q: "9-Dars savoli 7", a: ["A", "B", "C"], c: "A" }, { q: "9-Dars savoli 8", a: ["A", "B", "C"], c: "B" }, { q: "9-Dars savoli 9", a: ["A", "B", "C"], c: "C" }, { q: "9-Dars savoli 10", a: ["A", "B", "C"], c: "A" } ],
+    10: [ { q: "10-Dars savoli 1", a: ["A", "B", "C"], c: "A" }, { q: "10-Dars savoli 2", a: ["A", "B", "C"], c: "B" }, { q: "10-Dars savoli 3", a: ["A", "B", "C"], c: "C" }, { q: "10-Dars savoli 4", a: ["A", "B", "C"], c: "A" }, { q: "10-Dars savoli 5", a: ["A", "B", "C"], c: "B" }, { q: "10-Dars savoli 6", a: ["A", "B", "C"], c: "C" }, { q: "10-Dars savoli 7", a: ["A", "B", "C"], c: "A" }, { q: "10-Dars savoli 8", a: ["A", "B", "C"], c: "B" }, { q: "10-Dars savoli 9", a: ["A", "B", "C"], c: "C" }, { q: "10-Dars savoli 10", a: ["A", "B", "C"], c: "A" } ],
+    11: [ { q: "11-Dars savoli 1", a: ["A", "B", "C"], c: "A" }, { q: "11-Dars savoli 2", a: ["A", "B", "C"], c: "B" }, { q: "11-Dars savoli 3", a: ["A", "B", "C"], c: "C" }, { q: "11-Dars savoli 4", a: ["A", "B", "C"], c: "A" }, { q: "11-Dars savoli 5", a: ["A", "B", "C"], c: "B" }, { q: "11-Dars savoli 6", a: ["A", "B", "C"], c: "C" }, { q: "11-Dars savoli 7", a: ["A", "B", "C"], c: "A" }, { q: "11-Dars savoli 8", a: ["A", "B", "C"], c: "B" }, { q: "11-Dars savoli 9", a: ["A", "B", "C"], c: "C" }, { q: "11-Dars savoli 10", a: ["A", "B", "C"], c: "A" } ],
+    12: [ { q: "12-Dars savoli 1", a: ["A", "B", "C"], c: "A" }, { q: "12-Dars savoli 2", a: ["A", "B", "C"], c: "B" }, { q: "12-Dars savoli 3", a: ["A", "B", "C"], c: "C" }, { q: "12-Dars savoli 4", a: ["A", "B", "C"], c: "A" }, { q: "12-Dars savoli 5", a: ["A", "B", "C"], c: "B" }, { q: "12-Dars savoli 6", a: ["A", "B", "C"], c: "C" }, { q: "12-Dars savoli 7", a: ["A", "B", "C"], c: "A" }, { q: "12-Dars savoli 8", a: ["A", "B", "C"], c: "B" }, { q: "12-Dars savoli 9", a: ["A", "B", "C"], c: "C" }, { q: "12-Dars savoli 10", a: ["A", "B", "C"], c: "A" } ],
+    13: [ { q: "13-Dars savoli 1", a: ["A", "B", "C"], c: "A" }, { q: "13-Dars savoli 2", a: ["A", "B", "C"], c: "B" }, { q: "13-Dars savoli 3", a: ["A", "B", "C"], c: "C" }, { q: "13-Dars savoli 4", a: ["A", "B", "C"], c: "A" }, { q: "13-Dars savoli 5", a: ["A", "B", "C"], c: "B" }, { q: "13-Dars savoli 6", a: ["A", "B", "C"], c: "C" }, { q: "13-Dars savoli 7", a: ["A", "B", "C"], c: "A" }, { q: "13-Dars savoli 8", a: ["A", "B", "C"], c: "B" }, { q: "13-Dars savoli 9", a: ["A", "B", "C"], c: "C" }, { q: "13-Dars savoli 10", a: ["A", "B", "C"], c: "A" } ],
+    14: [ { q: "14-Dars savoli 1", a: ["A", "B", "C"], c: "A" }, { q: "14-Dars savoli 2", a: ["A", "B", "C"], c: "B" }, { q: "14-Dars savoli 3", a: ["A", "B", "C"], c: "C" }, { q: "14-Dars savoli 4", a: ["A", "B", "C"], c: "A" }, { q: "14-Dars savoli 5", a: ["A", "B", "C"], c: "B" }, { q: "14-Dars savoli 6", a: ["A", "B", "C"], c: "C" }, { q: "14-Dars savoli 7", a: ["A", "B", "C"], c: "A" }, { q: "14-Dars savoli 8", a: ["A", "B", "C"], c: "B" }, { q: "14-Dars savoli 9", a: ["A", "B", "C"], c: "C" }, { q: "14-Dars savoli 10", a: ["A", "B", "C"], c: "A" } ],
+    15: [ { q: "15-Dars savoli 1", a: ["A", "B", "C"], c: "A" }, { q: "15-Dars savoli 2", a: ["A", "B", "C"], c: "B" }, { q: "15-Dars savoli 3", a: ["A", "B", "C"], c: "C" }, { q: "15-Dars savoli 4", a: ["A", "B", "C"], c: "A" }, { q: "15-Dars savoli 5", a: ["A", "B", "C"], c: "B" }, { q: "15-Dars savoli 6", a: ["A", "B", "C"], c: "C" }, { q: "15-Dars savoli 7", a: ["A", "B", "C"], c: "A" }, { q: "15-Dars savoli 8", a: ["A", "B", "C"], c: "B" }, { q: "15-Dars savoli 9", a: ["A", "B", "C"], c: "C" }, { q: "15-Dars savoli 10", a: ["A", "B", "C"], c: "A" } ]
 };
+
+export const biletlar = {};
+for (let i = 1; i <= 20; i++) {
+    biletlar[i] = [
+        { q: "Bilet #" + i + ": Cyber xavfsizlik nima?", a: ["Himoya", "Hujum", "Hech narsa"], c: "Himoya" },
+        { q: "Bilet #" + i + ": Eng kuchli parol?", a: ["1234", "qwerty", "A!2b#9P$"], c: "A!2b#9P$" },
+        { q: "Bilet #" + i + ": IP manzil nima?", a: ["Unikal kod", "Ism", "Rasm"], c: "Unikal kod" },
+        { q: "Bilet #" + i + ": OBS dasturi nima?", a: ["Video yozish", "Rasm chizish", "O'yin"], c: "Video yozish" },
+        { q: "Bilet #" + i + ": Vigenere shifri nima?", a: ["Matematik shifr", "Rasm", "Musiqa"], c: "Matematik shifr" }
+    ];
+}
 

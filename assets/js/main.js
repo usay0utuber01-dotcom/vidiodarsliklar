@@ -1,646 +1,494 @@
-import { darslar as defaultDarslar, testlar as defaultTestlar } from './database.js';
+import { darslar as defaultDarslar, testlar as defaultTestlar, biletlar as defaultBiletlar } from './database.js';
 import { shifrlashVigenere, deshifrlashVigenere } from './cipher.js';
 
-// Dynamic Data Loading
-let darslar = defaultDarslar;
-try {
-    const savedDarslar = localStorage.getItem('vd_darslar');
-    if (savedDarslar) {
-        darslar = JSON.parse(savedDarslar);
-        if (darslar.length !== defaultDarslar.length) {
-            darslar = defaultDarslar;
-            localStorage.setItem('vd_darslar', JSON.stringify(darslar));
-            localStorage.setItem('vd_testlar', JSON.stringify(defaultTestlar));
-        }
-    } else {
-        localStorage.setItem('vd_darslar', JSON.stringify(defaultDarslar));
-        localStorage.setItem('vd_testlar', JSON.stringify(defaultTestlar));
-    }
-} catch (e) { console.error("Error loading darslar", e); }
+/**
+ * ==========================================
+ * FIREBASE CONFIGURATION
+ * ==========================================
+ * O'zingizning Firebase loyihangiz ma'lumotlarini bu yerga qo'ying:
+ * 1. Firebase Console (https://console.firebase.google.com/)
+ * 2. Project Settings -> General -> Your Apps -> Web SDK configuration -> Config
+ */
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
 
-let testlar = defaultTestlar;
-try {
-    const savedTestlar = localStorage.getItem('vd_testlar');
-    if (savedTestlar) testlar = JSON.parse(savedTestlar);
-} catch (e) { console.error("Error loading testlar", e); }
+// Mock Database if Config is missing (for local development only)
+let db;
+if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+    console.warn("FIREBASE CONFIGURATION MISSING! Using Mock Storage.");
+    db = {
+        ref: (path) => ({
+            on: (event, callback) => {
+                const data = JSON.parse(localStorage.getItem('mock_db_' + path) || '{}');
+                callback({ val: () => data });
+            },
+            set: (data) => localStorage.setItem('mock_db_' + path, JSON.stringify(data)),
+            update: (data) => {
+                const current = JSON.parse(localStorage.getItem('mock_db_' + path) || '{}');
+                localStorage.setItem('mock_db_' + path, JSON.stringify({ ...current, ...data }));
+            },
+            remove: () => localStorage.removeItem('mock_db_' + path)
+        })
+    };
+} else {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+}
 
-let userStats = {};
-try {
-    const savedStats = localStorage.getItem('vd_user_stats');
-    if (savedStats) userStats = JSON.parse(savedStats);
-} catch (e) { console.error("Error loading stats", e); }
-
-let userProgressMap = {};
-try {
-    const savedProg = localStorage.getItem('vd_user_progress');
-    if (savedProg) userProgressMap = JSON.parse(savedProg);
-} catch (e) { console.error("Error loading progress map", e); }
-
-let foydalanuvchi = localStorage.getItem('cyber_user_name') || "";
-let progress = 0;
-let joriyDars = null;
+// State Management
+let foydalanuvchi = JSON.parse(localStorage.getItem('cyber_user_session')) || null;
 let isAdmin = sessionStorage.getItem('vd_admin') === 'true';
+let joriyDars = null;
+let joriyTestTuri = 'lesson'; // 'lesson' or 'competition'
 
-// Initialize
+// UI Initialization
 function init() {
-    console.log("App Initializing...");
+    console.log("Cyber Academy Initializing...");
+    setupEventListeners();
+    
     if (foydalanuvchi) {
-        progress = userProgressMap[foydalanuvchi] || 0;
-        showDashboard();
+        syncUserSession();
     } else {
         showPage('loginPage');
     }
-    setupEventListeners();
 }
 
 window.addEventListener('DOMContentLoaded', init);
 
 function setupEventListeners() {
-    const loginBtn = document.getElementById('loginBtn');
-    if (loginBtn) loginBtn.addEventListener('click', login);
-
-    const adminLoginBtn = document.getElementById('adminLoginBtn');
-    if (adminLoginBtn) adminLoginBtn.addEventListener('click', adminLogin);
+    document.getElementById('loginBtn')?.addEventListener('click', login);
+    document.getElementById('registerBtn')?.addEventListener('click', register);
+    document.getElementById('adminLoginBtn')?.addEventListener('click', adminLogin);
+    document.getElementById('logoutBtn')?.addEventListener('click', logout);
     
     document.querySelectorAll('[data-page]').forEach(el => {
-        el.addEventListener('click', function(e) {
-            const pageId = e.currentTarget.getAttribute('data-page');
-            showPage(pageId);
-        });
+        el.addEventListener('click', (e) => showPage(e.currentTarget.getAttribute('data-page')));
     });
 
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) logoutBtn.addEventListener('click', logout);
-    
-    const encBtn = document.getElementById('encryptBtn');
-    if (encBtn) encBtn.addEventListener('click', handleEncrypt);
-
-    const decBtn = document.getElementById('decryptBtn');
-    if (decBtn) decBtn.addEventListener('click', handleDecrypt);
-
-    const clearBtn = document.getElementById('clearCipherBtn');
-    if (clearBtn) clearBtn.addEventListener('click', clearCipher);
-
-    const copyBtn = document.getElementById('copyCipherBtn');
-    if (copyBtn) copyBtn.addEventListener('click', copyCipher);
+    // Cipher Page Listeners
+    document.getElementById('encryptBtn')?.addEventListener('click', handleEncrypt);
+    document.getElementById('decryptBtn')?.addEventListener('click', handleDecrypt);
+    document.getElementById('clearCipherBtn')?.addEventListener('click', clearCipher);
+    document.getElementById('copyCipherBtn')?.addEventListener('click', copyCipher);
 }
 
-function showPage(id) {
-    if (id === 'adminDashboardPage' && !isAdmin) {
-        return showPage('adminLoginPage');
-    }
+// Authentication Logic
+window.switchAuth = function(type) {
+    const loginForm = document.getElementById('loginForm');
+    const regForm = document.getElementById('registerForm');
+    const tabLogin = document.getElementById('tabLogin');
+    const tabReg = document.getElementById('tabRegister');
 
-    if (id !== 'lessonPage') {
-        const video = document.getElementById('lessonVideo');
-        if (video) video.src = "";
+    if (type === 'login') {
+        loginForm.style.display = 'block';
+        regForm.style.display = 'none';
+        tabLogin.classList.add('active');
+        tabReg.classList.remove('active');
+    } else {
+        loginForm.style.display = 'none';
+        regForm.style.display = 'block';
+        tabLogin.classList.remove('active');
+        tabReg.classList.add('active');
     }
+}
 
-    const pages = document.querySelectorAll('.page');
-    pages.forEach(p => p.classList.remove('active'));
+async function register() {
+    const first = document.getElementById('regFirst').value.trim();
+    const last = document.getElementById('regLast').value.trim();
+    const code = document.getElementById('regCode').value.trim();
+
+    if (!first || !last || code.length !== 4) return alert("Barcha maydonlarni to'ldiring (kod 4 xonali bo'lsin)!");
+
+    const userId = (first + "_" + last).toLowerCase().replace(/\s+/g, '');
     
+    db.ref('users/' + userId).set({
+        firstName: first,
+        lastName: last,
+        pin: code,
+        stats: {
+            correct: 0,
+            incorrect: 0,
+            progress: 0,
+            ticketId: null,
+            lastSeen: new Date().toLocaleString()
+        }
+    }).then(() => {
+        alert("Muvaffaqiyatli ro'yxatdan o'tdingiz! Endi tizimga kiring.");
+        switchAuth('login');
+    });
+}
+
+function login() {
+    const first = document.getElementById('loginFirst').value.trim();
+    const last = document.getElementById('loginLast').value.trim();
+    const code = document.getElementById('loginCode').value.trim();
+
+    if (!first || !last || !code) return alert("Ma'lumotlarni to'liq kiriting!");
+
+    const userId = (first + "_" + last).toLowerCase().replace(/\s+/g, '');
+
+    db.ref('users/' + userId).on('value', (snapshot) => {
+        const user = snapshot.val();
+        if (user && user.pin === code) {
+            foydalanuvchi = { id: userId, ...user };
+            localStorage.setItem('cyber_user_session', JSON.stringify(foydalanuvchi));
+            syncUserSession();
+        } else {
+            alert("Ism, familiya yoki kod xato!");
+        }
+    }, { onlyOnce: true });
+}
+
+function syncUserSession() {
+    db.ref('users/' + foydalanuvchi.id).on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            foydalanuvchi = { id: foydalanuvchi.id, ...data };
+            updateUI();
+        }
+    });
+    showPage('dashboardPage');
+}
+
+function updateUI() {
+    const welcome = document.getElementById('welcomeMsg');
+    if (welcome) welcome.innerText = `XUSH KELIBSIZ, ${foydalanuvchi.firstName} ${foydalanuvchi.lastName}_`.toUpperCase();
+    
+    // Check if user has an assigned ticket
+    if (foydalanuvchi.stats.ticketId && joriyTestTuri !== 'competition') {
+        notifyTicket(foydalanuvchi.stats.ticketId);
+    }
+}
+
+function notifyTicket(id) {
+    const existing = document.getElementById('ticketNotification');
+    if (existing) return;
+
+    const div = document.createElement('div');
+    div.id = 'ticketNotification';
+    div.className = 'card comp-card';
+    div.style.marginBottom = '2rem';
+    div.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 style="color: var(--gold);">SIZGA BELLASHUV BILETI BERILDI!</h3>
+                <p>Bilet raqami: <span class="ticket-badge">#${id}</span></p>
+            </div>
+            <button class="btn btn-primary" onclick="startCompetition(${id})" style="background: var(--gold); color: #000;">BOSHLASH_</button>
+        </div>
+    `;
+    document.getElementById('dashboardPage').prepend(div);
+}
+
+// Navigation
+function showPage(id) {
+    if (id === 'adminDashboardPage' && !isAdmin) return showPage('adminLoginPage');
+
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const target = document.getElementById(id);
     if (target) {
         target.classList.add('active');
-        
         const navbar = document.getElementById('navbar');
-        if (navbar) {
-            if (id === 'loginPage' || id === 'certificatePage' || id === 'adminLoginPage') {
-                navbar.style.display = 'none';
-            } else {
-                navbar.style.display = 'flex';
-            }
-        }
-
+        navbar.style.display = (id === 'loginPage' || id === 'adminLoginPage') ? 'none' : 'flex';
+        
         if (id === 'dashboardPage') renderDashboard();
-        if (id === 'profilePage') renderProfile();
         if (id === 'adminDashboardPage') renderAdminDashboard();
+        if (id === 'profilePage') renderProfile();
         
         window.scrollTo(0, 0);
     }
 }
 window.showPage = showPage;
 
-function login() {
-    const nameInput = document.getElementById('nameInput');
-    if (!nameInput) return;
-    const name = nameInput.value.trim();
-    if (!name) return alert("ILTIMOS, ISM VA FAMILIYANGIZNI KIRITING!");
-    
-    foydalanuvchi = name;
-    localStorage.setItem('cyber_user_name', foydalanuvchi);
-    progress = userProgressMap[name] || 0;
-    
-    updateUserStats(name, 'login');
-    showDashboard();
-}
-window.login = login;
-
+// Admin Logic
 function adminLogin() {
-    const userEl = document.getElementById('adminUser');
-    const passEl = document.getElementById('adminPass');
-    if (!userEl || !passEl) return;
-    
-    const user = userEl.value;
-    const pass = passEl.value;
-
-    if (user === 'xujaqulov01' && pass === 'admin777') {
+    const u = document.getElementById('adminUser').value;
+    const p = document.getElementById('adminPass').value;
+    if (u === 'xujaqulov01' && p === 'admin777') {
         isAdmin = true;
         sessionStorage.setItem('vd_admin', 'true');
         showPage('adminDashboardPage');
     } else {
-        alert("XATO LOGIN YOKI PAROL!");
+        alert("ACCESS DENIED");
     }
-}
-window.adminLogin = adminLogin;
-
-function showDashboard() {
-    const welcome = document.getElementById('welcomeMsg');
-    if (welcome) welcome.innerText = "XUSH KELIBSIZ, " + foydalanuvchi.toUpperCase() + "_";
-    showPage('dashboardPage');
-}
-
-function logout() {
-    if (confirm("Tizimdan chiqishni xohlaysizmi?")) {
-        localStorage.removeItem('cyber_user_name');
-        sessionStorage.removeItem('vd_admin');
-        window.location.reload();
-    }
-}
-
-function updateUserStats(user, action, details) {
-    if (!userStats[user]) {
-        userStats[user] = {
-            viewed: [],
-            tests: {},
-            lastSeen: new Date().toLocaleString()
-        };
-    }
-    
-    const stats = userStats[user];
-    stats.lastSeen = new Date().toLocaleString();
-
-    if (action === 'view') {
-        if (stats.viewed.indexOf(details) === -1) {
-            stats.viewed.push(details);
-        }
-    } else if (action === 'test') {
-        stats.tests[details.id] = details.percent;
-    }
-
-    localStorage.setItem('vd_user_stats', JSON.stringify(userStats));
-}
-
-function renderDashboard() {
-    const grid = document.getElementById('lessonGrid');
-    if (!grid) return;
-    grid.innerHTML = "";
-
-    darslar.forEach((d, i) => {
-        const isLocked = i > progress;
-        const card = document.createElement('div');
-        card.className = "lesson-card" + (isLocked ? " locked" : "");
-        
-        const videoId = getYoutubeID(d.v);
-        const thumb = "https://img.youtube.com/vi/" + videoId + "/hqdefault.jpg";
-
-        card.innerHTML = 
-            (isLocked ? '<div class="lock-overlay">🔒</div>' : '') +
-            '<img src="' + thumb + '" class="lesson-thumb" alt="' + d.t + '">' +
-            '<div class="lesson-content">' +
-                '<h3 class="lesson-title">' + d.t + '</h3>' +
-                '<p class="lesson-desc">' + (d.description || "") + '</p>' +
-                '<div style="margin-top: 1rem; color: var(--primary); font-weight: 700;">' +
-                    (isLocked ? 'Yopiq' : 'Boshlash ▶') +
-                '</div>' +
-            '</div>';
-
-        if (!isLocked) {
-            card.onclick = function() { window.openLesson(i); };
-        }
-        grid.appendChild(card);
-    });
-}
-
-window.openLesson = function(index) {
-    const d = darslar[index];
-    joriyDars = d;
-    document.getElementById('lessonTitle').innerText = d.t;
-    const videoId = getYoutubeID(d.v);
-    document.getElementById('lessonVideo').src = "https://www.youtube.com/embed/" + videoId + "?autoplay=1";
-    updateUserStats(foydalanuvchi, 'view', d.t);
-    showPage('lessonPage');
 }
 
 window.toggleAdminView = function(view) {
-    const sections = document.querySelectorAll('.admin-view-section');
-    sections.forEach(s => s.style.display = 'none');
-    if (view === 'modules') {
-        document.getElementById('adminModulesList').style.display = 'block';
-    } else {
+    document.querySelectorAll('.admin-view-section').forEach(s => s.style.display = 'none');
+    if (view === 'modules') document.getElementById('adminModulesList').style.display = 'block';
+    if (view === 'users') {
         document.getElementById('adminUsersList').style.display = 'block';
-        renderUserStats();
+        renderAdminUserStats();
+    }
+    if (view === 'leaderboard') {
+        document.getElementById('adminLeaderboard').style.display = 'block';
+        listenLeaderboard();
     }
 }
 
 function renderAdminDashboard() {
     const list = document.getElementById('adminModulesList');
-    if (!list) return;
-    let html = '<table class="admin-table"><thead><tr><th>MODUL NOMI</th><th style="text-align: center;">BOSHQARUV</th></tr></thead><tbody>';
-
-    darslar.forEach((d, i) => {
-        html += '<tr><td style="font-weight: 600;">' + d.t + '</td>' +
-                '<td style="text-align: center; display: flex; gap: 0.5rem; justify-content: center;">' +
-                    '<button class="btn btn-primary" style="padding: 8px 15px; font-size: 0.75rem;" onclick="openModuleModal(' + i + ')">TAHRIRLASH</button>' +
-                    '<button class="btn btn-outline" style="padding: 8px 15px; font-size: 0.75rem; border-color: var(--secondary); color: var(--secondary);" onclick="openTestManager(' + d.id + ')">TESTLAR</button>' +
-                    '<button class="btn btn-outline" style="padding: 8px 15px; font-size: 0.75rem; border-color: var(--accent); color: var(--accent);" onclick="deleteModule(' + i + ')">O\'CHIRISH</button>' +
-                '</td></tr>';
+    let html = '<table class="admin-table"><thead><tr><th>MODUL NOMI</th><th>AMALLAR</th></tr></thead><tbody>';
+    defaultDarslar.forEach((d, i) => {
+        html += `<tr>
+            <td style="font-weight: 600;">${d.t}</td>
+            <td style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-outline" style="font-size: 0.7rem;" onclick="openTestManager(${d.id})">TESTLAR</button>
+            </td>
+        </tr>`;
     });
-
     html += '</tbody></table>';
     list.innerHTML = html;
 }
 
-function renderUserStats() {
+function renderAdminUserStats() {
     const body = document.getElementById('userStatsBody');
-    if (!body) return;
-    body.innerHTML = "";
+    db.ref('users').on('value', (snapshot) => {
+        const users = snapshot.val() || {};
+        body.innerHTML = "";
+        Object.entries(users).forEach(([id, u]) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${u.firstName} ${u.lastName}</strong><br><small>${u.stats.lastSeen}</small></td>
+                <td>${u.stats.progress || 0}</td>
+                <td>T: ${u.stats.correct || 0} | X: ${u.stats.incorrect || 0}</td>
+                <td><button class="btn btn-outline" style="color: var(--accent); border-color: var(--accent); font-size: 0.7rem;" onclick="deleteUser('${id}')">O'CHIRISH</button></td>
+            `;
+            body.appendChild(tr);
+        });
+    });
+}
 
-    Object.keys(userStats).forEach(user => {
-        const stats = userStats[user];
-        const tr = document.createElement('tr');
+window.deleteUser = function(id) {
+    if (confirm("Ushbu foydalanuvchini o'chirmoqchimisiz?")) {
+        db.ref('users/' + id).remove();
+    }
+}
+
+// Competition Logic
+window.distributeTickets = function() {
+    if (!confirm("Barcha talabalarga biletlarni tasodifiy tarqatmoqchimisiz?")) return;
+
+    db.ref('users').once('value', (snapshot) => {
+        const users = snapshot.val();
+        const updates = {};
+        Object.keys(users).forEach(id => {
+            const randomTicket = Math.floor(Math.random() * 20) + 1;
+            updates[`users/${id}/stats/ticketId`] = randomTicket;
+        });
+        db.ref().update(updates).then(() => alert("Biletlar tarqatildi!"));
+    });
+}
+
+function listenLeaderboard() {
+    const body = document.getElementById('leaderboardBody');
+    db.ref('users').on('value', (snapshot) => {
+        const users = snapshot.val() || {};
+        const sorted = Object.entries(users)
+            .sort((a, b) => (b[1].stats.correct || 0) - (a[1].stats.correct || 0));
         
-        let testsHtml = "";
-        if (stats.tests) {
-            Object.entries(stats.tests).forEach(([id, percent]) => {
-                testsHtml += "Modul " + id + ": " + percent + "% <br>";
+        body.innerHTML = "";
+        sorted.forEach(([id, u], index) => {
+            const tr = document.createElement('tr');
+            const rank = index + 1;
+            let rankHtml = rank;
+            if (rank === 1) rankHtml = '<span class="rank-1"><span class="crown">👑</span>1</span>';
+            else if (rank === 2) rankHtml = '<span class="rank-2">🥈 2</span>';
+            else if (rank === 3) rankHtml = '<span class="rank-3">🥉 3</span>';
+
+            tr.innerHTML = `
+                <td>${rankHtml}</td>
+                <td style="text-align: left;">${u.firstName} ${u.lastName}</td>
+                <td><span class="ticket-badge">${u.stats.ticketId || '-'}</span></td>
+                <td style="color: var(--primary); font-weight: bold;">${u.stats.correct || 0}</td>
+                <td style="color: var(--accent);">${u.stats.incorrect || 0}</td>
+                <td style="font-size: 0.7rem; color: #888;">${u.stats.lastSeen.split(',')[1] || u.stats.lastSeen}</td>
+            `;
+            body.appendChild(tr);
+        });
+    });
+}
+
+window.clearLeaderboard = function() {
+    if (confirm("HAQIQATDAN HAM JADVALNI TOZALAYMIZMI? Barcha natijalar nolga tushadi!")) {
+        db.ref('users').once('value', (snapshot) => {
+            const users = snapshot.val();
+            const updates = {};
+            Object.keys(users).forEach(id => {
+                updates[`users/${id}/stats/correct`] = 0;
+                updates[`users/${id}/stats/incorrect`] = 0;
+                updates[`users/${id}/stats/ticketId`] = null;
             });
-        }
+            db.ref().update(updates);
+        });
+    }
+}
 
-        tr.innerHTML = '<td><strong>' + user.toUpperCase() + '</strong><br><small style="color: #666;">Oxirgi faollik: ' + stats.lastSeen + '</small></td>' +
-                       '<td>' + (stats.viewed ? stats.viewed.length : 0) + ' ta dars</td>' +
-                       '<td>' + (testsHtml || 'Hali yo\'q') + '</td>' +
-                       '<td style="text-align: center;"><button class="btn btn-outline" style="color: var(--accent); border-color: var(--accent); font-size: 0.7rem;" onclick="deleteUserStats(\'' + user + '\')">TOZALASH</button></td>';
-        body.appendChild(tr);
+window.exportToExcel = function() {
+    const table = document.getElementById("leaderboardTableMain");
+    const rows = [];
+    const headers = ["O'RIN", "F.I.SH", "BILET", "TO'G'RI", "XATO", "VAQT"];
+    rows.push(headers);
+
+    const trs = table.querySelectorAll('tbody tr');
+    trs.forEach((tr, i) => {
+        const tds = tr.querySelectorAll('td');
+        const row = [
+            i + 1,
+            tds[1].innerText,
+            tds[2].innerText,
+            tds[3].innerText,
+            tds[4].innerText,
+            tds[5].innerText
+        ];
+        rows.push(row);
     });
+
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Natijalar");
+    XLSX.writeFile(workbook, `Cyber_Academy_Natijalar_${new Date().toLocaleDateString()}.xlsx`);
 }
 
-window.deleteUserStats = function(user) {
-    if (confirm(user + " ma'lumotlarini o'chirmoqchimisiz?")) {
-        delete userStats[user];
-        localStorage.setItem('vd_user_stats', JSON.stringify(userStats));
-        renderUserStats();
-    }
-}
-
-window.openModuleModal = function(index = -1) {
-    const modal = document.getElementById('moduleModal');
-    const title = document.getElementById('modalTitle');
-    const editId = document.getElementById('editModuleId');
-    
-    if (index === -1) {
-        title.innerText = "YANGI DARS QO'SHISH";
-        editId.value = "-1";
-        document.getElementById('modTitle').value = "";
-        document.getElementById('modVideo').value = "";
-        document.getElementById('modDesc').value = "";
-    } else {
-        const d = darslar[index];
-        title.innerText = "DARS TAHRIRLASH";
-        editId.value = index;
-        document.getElementById('modTitle').value = d.t;
-        document.getElementById('modVideo').value = d.v;
-        document.getElementById('modDesc').value = d.description || "";
-    }
-    modal.style.display = "flex";
-}
-
-window.closeModuleModal = function() {
-    document.getElementById('moduleModal').style.display = "none";
-}
-
-window.saveModule = function() {
-    const index = parseInt(document.getElementById('editModuleId').value);
-    const title = document.getElementById('modTitle').value.trim();
-    const video = document.getElementById('modVideo').value.trim();
-    const desc = document.getElementById('modDesc').value.trim();
-
-    if (!title || !video) return alert("Sarlavha va Video link shart!");
-
-    if (index === -1) {
-        const newId = darslar.length > 0 ? Math.max.apply(null, darslar.map(function(d) { return d.id; })) + 1 : 1;
-        darslar.push({ id: newId, t: title, v: video, description: desc });
-        testlar[newId] = [];
-    } else {
-        darslar[index].t = title;
-        darslar[index].v = video;
-        darslar[index].description = desc;
-    }
-
-    persistData();
-    closeModuleModal();
-    renderAdminDashboard();
-}
-
-window.deleteModule = function(index) {
-    if (confirm("Ushbu darsni o'chirmoqchimisiz?")) {
-        const id = darslar[index].id;
-        darslar.splice(index, 1);
-        delete testlar[id];
-        persistData();
-        renderAdminDashboard();
-    }
-}
-
-let currentEditingModuleId = null;
-
-window.openTestManager = function(moduleId) {
-    currentEditingModuleId = moduleId;
-    const modal = document.getElementById('testManagerModal');
-    const list = document.getElementById('questionsList');
-    const questions = testlar[moduleId] || [];
-
-    let html = "";
-    questions.forEach((q, i) => {
-        html += '<div class="card q-card" style="background: rgba(0,0,0,0.6); border: 1px solid var(--glass-border); margin-bottom: 1.5rem;">' +
-                '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;">' +
-                '<strong style="color: var(--primary);">SAVOL #' + (i+1) + '</strong>' +
-                '<button class="btn btn-outline" style="color: var(--accent); border-color: var(--accent); padding: 5px 15px; font-size: 0.8rem;" onclick="removeQuestion(' + i + ')">O\'CHIRISH_</button>' +
-                '</div>' +
-                '<input type="text" class="input-field q-text" placeholder="Savol matni..." value="' + q.q + '" style="background: rgba(255,255,255,0.05); margin-bottom: 1rem;">' +
-                '<div style="display: flex; flex-direction: column; gap: 0.8rem;">' +
-                    '<div style="display: flex; align-items: center; gap: 10px;">' +
-                        '<input type="radio" name="correct_' + i + '" value="0" ' + (q.c === q.a[0] ? 'checked' : '') + '>' +
-                        '<input type="text" class="input-field q-ans" placeholder="Variant A" value="' + (q.a[0] || '') + '" style="margin:0;">' +
-                    '</div>' +
-                    '<div style="display: flex; align-items: center; gap: 10px;">' +
-                        '<input type="radio" name="correct_' + i + '" value="1" ' + (q.c === q.a[1] ? 'checked' : '') + '>' +
-                        '<input type="text" class="input-field q-ans" placeholder="Variant B" value="' + (q.a[1] || '') + '" style="margin:0;">' +
-                    '</div>' +
-                    '<div style="display: flex; align-items: center; gap: 10px;">' +
-                        '<input type="radio" name="correct_' + i + '" value="2" ' + (q.c === q.a[2] ? 'checked' : '') + '>' +
-                        '<input type="text" class="input-field q-ans" placeholder="Variant C" value="' + (q.a[2] || '') + '" style="margin:0;">' +
-                    '</div>' +
-                '</div>' +
-                '</div>';
-    });
-    list.innerHTML = html;
-    modal.style.display = "flex";
-}
-
-window.addQuestion = function() {
-    const list = document.getElementById('questionsList');
-    const i = list.children.length;
-    const div = document.createElement('div');
-    div.className = "card q-card";
-    div.style.background = "rgba(0,0,0,0.6)";
-    div.style.border = "1px solid var(--glass-border)";
-    div.style.marginBottom = "1.5rem";
-    div.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;">' +
-                    '<strong style="color: var(--primary);">YANGI SAVOL</strong>' +
-                    '<button class="btn btn-outline" style="color: var(--accent); border-color: var(--accent); padding: 5px 15px; font-size: 0.8rem;" onclick="this.parentElement.parentElement.remove()">O\'CHIRISH_</button>' +
-                    '</div>' +
-                    '<input type="text" class="input-field q-text" placeholder="Savol matni..." style="background: rgba(255,255,255,0.05); margin-bottom: 1rem;">' +
-                    '<div style="display: flex; flex-direction: column; gap: 0.8rem;">' +
-                        '<div style="display: flex; align-items: center; gap: 10px;">' +
-                            '<input type="radio" name="correct_' + i + '" value="0" checked>' +
-                            '<input type="text" class="input-field q-ans" placeholder="Variant A" style="margin:0;">' +
-                        '</div>' +
-                        '<div style="display: flex; align-items: center; gap: 10px;">' +
-                            '<input type="radio" name="correct_' + i + '" value="1">' +
-                            '<input type="text" class="input-field q-ans" placeholder="Variant B" style="margin:0;">' +
-                        '</div>' +
-                        '<div style="display: flex; align-items: center; gap: 10px;">' +
-                            '<input type="radio" name="correct_' + i + '" value="2">' +
-                            '<input type="text" class="input-field q-ans" placeholder="Variant C" style="margin:0;">' +
-                        '</div>' +
-                    '</div>';
-    list.appendChild(div);
-}
-
-window.removeQuestion = function(index) {
-    const questions = testlar[currentEditingModuleId];
-    questions.splice(index, 1);
-    openTestManager(currentEditingModuleId);
-}
-
-window.saveTests = function() {
-    const list = document.getElementById('questionsList').children;
-    const newQuestions = [];
-
-    for (let i = 0; i < list.length; i++) {
-        const card = list[i];
-        const q = card.querySelector('.q-text').value.trim();
-        const ansInputs = card.querySelectorAll('.q-ans');
-        const ans = [];
-        for (let j = 0; j < ansInputs.length; j++) { ans.push(ansInputs[j].value.trim()); }
-        
-        const radios = card.querySelectorAll('input[type="radio"]');
-        let correctIdx = 0;
-        for (let r = 0; r < radios.length; r++) {
-            if (radios[r].checked) { correctIdx = r; break; }
-        }
-        const correct = ans[correctIdx];
-
-        if (q && correct) {
-            newQuestions.push({ q: q, a: ans, c: correct });
-        }
-    }
-
-    testlar[currentEditingModuleId] = newQuestions;
-    persistData();
-    closeTestManager();
-}
-
-window.closeTestManager = function() {
-    document.getElementById('testManagerModal').style.display = "none";
-}
-
-function persistData() {
-    localStorage.setItem('vd_darslar', JSON.stringify(darslar));
-    localStorage.setItem('vd_testlar', JSON.stringify(testlar));
+// Student Test Logic
+window.startCompetition = function(id) {
+    joriyTestTuri = 'competition';
+    const questions = defaultBiletlar[id];
+    renderTest(questions);
+    showPage('testPage');
 }
 
 window.startTest = function() {
-    const video = document.getElementById('lessonVideo');
-    if (video) video.src = "";
-
-    const container = document.getElementById('testContent');
-    const questions = testlar[joriyDars.id];
-    
-    if (!questions || questions.length === 0) return alert("Ushbu dars uchun testlar hali qo'shilmagan!");
-
-    let html = "";
-    questions.forEach((q, i) => {
-        let optionsHtml = "";
-        q.a.forEach(opt => {
-            optionsHtml += '<label class="option-label"><input type="radio" name="q' + i + '" value="' + opt + '"> ' + opt + '</label>';
-        });
-        html += '<div class="card" style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.5);">' +
-                '<p style="font-size: 1.1rem; margin-bottom: 1rem;">' + (i+1) + '. ' + q.q + '</p>' +
-                '<div class="test-options">' + optionsHtml + '</div></div>';
-    });
-    container.innerHTML = html;
+    joriyTestTuri = 'lesson';
+    const questions = defaultTestlar[joriyDars.id];
+    renderTest(questions);
     showPage('testPage');
 }
-window.startTest = window.startTest;
+
+function renderTest(questions) {
+    const container = document.getElementById('testContent');
+    let html = "";
+    questions.forEach((q, i) => {
+        let opts = "";
+        q.a.forEach(opt => {
+            opts += `<label class="option-label"><input type="radio" name="q${i}" value="${opt}"> ${opt}</label>`;
+        });
+        html += `<div class="card" style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.5);">
+            <p style="font-size: 1.1rem; margin-bottom: 1rem;">${i+1}. ${q.q}</p>
+            <div class="test-options">${opts}</div>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
 
 window.submitTest = function() {
-    const questions = testlar[joriyDars.id];
+    const questions = (joriyTestTuri === 'competition') ? defaultBiletlar[foydalanuvchi.stats.ticketId] : defaultTestlar[joriyDars.id];
     let correct = 0;
+    let incorrect = 0;
 
     questions.forEach((q, i) => {
-        const selected = document.querySelector('input[name="q' + i + '"]:checked');
-        if (selected && selected.value === q.c) correct++;
+        const sel = document.querySelector(`input[name="q${i}"]:checked`);
+        if (sel && sel.value === q.c) correct++;
+        else incorrect++;
     });
 
     const percent = Math.round((correct / questions.length) * 100);
-    updateUserStats(foydalanuvchi, 'test', { id: joriyDars.id, percent: percent });
+
+    // Update Global Stats
+    if (joriyTestTuri === 'competition') {
+        db.ref('users/' + foydalanuvchi.id + '/stats').update({
+            correct: (foydalanuvchi.stats.correct || 0) + correct,
+            incorrect: (foydalanuvchi.stats.incorrect || 0) + incorrect,
+            lastSeen: new Date().toLocaleString()
+        });
+    } else {
+        // Handle lesson progress
+        if (percent >= 60) {
+            const currentIdx = defaultDarslar.findIndex(d => d.id === joriyDars.id);
+            const newProg = Math.max(foydalanuvchi.stats.progress, currentIdx + 1);
+            db.ref('users/' + foydalanuvchi.id + '/stats').update({ progress: newProg });
+        }
+    }
+
     renderResult(percent);
 }
 
 function renderResult(percent) {
+    document.getElementById('resultPercent').innerText = percent + "%";
     const msg = document.getElementById('resultMsg');
-    const actionBtn = document.getElementById('resultActionBtn');
-    const percentEl = document.getElementById('resultPercent');
-    
-    percentEl.innerText = percent + "%";
-    
+    const btn = document.getElementById('resultActionBtn');
+
     if (percent >= 60) {
-        msg.innerText = "TABRIKLAYMIZ! BOSQICH MUVAFFAQIYATLI YAKUNLANDI.";
-        msg.style.color = "var(--primary)";
-        
-        let currentIndex = -1;
-        for (let i = 0; i < darslar.length; i++) { if (darslar[i].id === joriyDars.id) { currentIndex = i; break; } }
-
-        if (progress <= currentIndex) {
-            progress = currentIndex + 1;
-            userProgressMap[foydalanuvchi] = progress;
-            localStorage.setItem('vd_user_progress', JSON.stringify(userProgressMap));
-        }
-
-        if (progress >= darslar.length) {
-            actionBtn.innerText = "YAKUNIY SERTIFIKATNI OLISH";
-            actionBtn.onclick = function() { showPage('profilePage'); };
-        } else {
-            actionBtn.innerText = "KEYINGI MODULGA O'TISH";
-            actionBtn.onclick = function() { showPage('dashboardPage'); };
-        }
+        msg.innerText = "Muvaffaqiyatli!";
+        btn.innerText = "DAVOM ETISH";
+        btn.onclick = () => showPage('dashboardPage');
     } else {
-        msg.innerText = "NATIJA YETARLI EMAS. QAYTADAN O'RING!";
-        msg.style.color = "var(--accent)";
-        actionBtn.innerText = "DARSGA QAYTISH";
-        actionBtn.onclick = function() {
-            window.openLesson(darslar.indexOf(joriyDars));
-        };
+        msg.innerText = "Yana bir bor urinib ko'ring!";
+        btn.innerText = "QAYTADAN BOSHLASH";
+        btn.onclick = () => showPage('testPage');
     }
     showPage('resultPage');
 }
 
-function renderProfile() {
-    document.getElementById('profileName').innerText = foydalanuvchi.toUpperCase();
-    document.getElementById('profileProgressText').innerText = "O'ZLASHTIRISH: " + progress + "/" + darslar.length + " MODUL";
-    
-    const certList = document.getElementById('profileCertificates');
-    certList.innerHTML = "";
-
-    for (let i = 0; i < progress; i++) {
-        const d = darslar[i];
-        if (!d) continue;
+// Dashboard rendering
+function renderDashboard() {
+    const grid = document.getElementById('lessonGrid');
+    grid.innerHTML = "";
+    defaultDarslar.forEach((d, i) => {
+        const isLocked = i > (foydalanuvchi.stats.progress || 0);
         const card = document.createElement('div');
-        card.className = "card";
-        card.style.display = "flex";
-        card.style.justifyContent = "space-between";
-        card.style.alignItems = "center";
-        card.innerHTML = '<div><h4 style="color: var(--primary);">' + d.t + '</h4><p style="font-size: 0.8rem; color: var(--text-dim);">TAMOMLANDI: ✅</p></div><div style="font-size: 2rem;">🎖️</div>';
-        certList.appendChild(card);
-    }
-
-    if (progress >= darslar.length && darslar.length > 0) {
-        const finalBtn = document.createElement('button');
-        finalBtn.className = "btn btn-primary";
-        finalBtn.style.width = "100%";
-        finalBtn.style.marginTop = "1rem";
-        finalBtn.innerText = "ASOSIY SERTIFIKATNI GENERATSIYA QILISH";
-        finalBtn.onclick = generateFinalCertificate;
-        certList.appendChild(finalBtn);
-    }
-}
-
-function generateFinalCertificate() {
-    document.getElementById('certNameDisplay').innerText = foydalanuvchi.toUpperCase();
-    const now = new Date();
-    document.getElementById('certDate').innerText = now.getDate() + "." + (now.getMonth()+1) + "." + now.getFullYear();
-    
-    const qrContainer = document.getElementById('certQR');
-    qrContainer.innerHTML = "";
-    new QRCode(qrContainer, {
-        text: "https://videodarslik.uz/verify/" + foydalanuvchi.replace(/ /g, '_'),
-        width: 120,
-        height: 120
-    });
-    showPage('certificatePage');
-}
-
-window.downloadPDF = async function() {
-    const element = document.getElementById('certToExport');
-    const { jsPDF } = window.jspdf;
-    html2canvas(element, { scale: 2 }).then(canvas => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('l', 'px', [canvas.width, canvas.height]);
-        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-        pdf.save("VideoDarslik_" + foydalanuvchi + ".pdf");
+        card.className = "lesson-card" + (isLocked ? " locked" : "");
+        const vId = getYoutubeID(d.v);
+        card.innerHTML = `
+            ${isLocked ? '<div class="lock-overlay">🔒</div>' : ''}
+            <img src="https://img.youtube.com/vi/${vId}/hqdefault.jpg" class="lesson-thumb">
+            <div class="lesson-content">
+                <h3 class="lesson-title">${d.t}</h3>
+                <p class="lesson-desc">${d.description || ""}</p>
+            </div>
+        `;
+        if (!isLocked) card.onclick = () => { joriyDars = d; showPage('lessonPage'); document.getElementById('lessonTitle').innerText = d.t; document.getElementById('lessonVideo').src = `https://www.youtube.com/embed/${vId}?autoplay=1`; };
+        grid.appendChild(card);
     });
 }
 
+function getYoutubeID(url) {
+    const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length == 11) ? match[2] : url.split('/').pop();
+}
+
+function logout() {
+    localStorage.removeItem('cyber_user_session');
+    location.reload();
+}
+
+// Cipher functions
 function handleEncrypt() {
-    const matn = document.getElementById('cipherIn').value;
-    const kalit = document.getElementById('cipherKey').value;
-    const res = shifrlashVigenere(matn, kalit);
+    const res = shifrlashVigenere(document.getElementById('cipherIn').value, document.getElementById('cipherKey').value);
     if (res.error) return alert(res.error);
     document.getElementById('cipherOut').value = res.natijaStr;
-    renderCipherTable(res.qatorNomlari, res.ustunlar);
 }
-
 function handleDecrypt() {
-    const matn = document.getElementById('cipherIn').value;
-    const kalit = document.getElementById('cipherKey').value;
-    const res = deshifrlashVigenere(matn, kalit);
+    const res = deshifrlashVigenere(document.getElementById('cipherIn').value, document.getElementById('cipherKey').value);
     if (res.error) return alert(res.error);
     document.getElementById('cipherOut').value = res.natijaStr;
-    renderCipherTable(res.qatorNomlari, res.ustunlar);
 }
-
-function renderCipherTable(headers, rows) {
-    const container = document.getElementById('cipherTableBox');
-    let html = '<table style="width: 100%; border-collapse: collapse; margin-top: 1rem; font-family: monospace;">';
-    headers.forEach((h, i) => {
-        html += '<tr><th style="border: 1px solid var(--primary); padding: 5px; background: rgba(0,255,65,0.1);">' + h + '</th>';
-        rows.forEach(row => {
-            html += '<td style="border: 1px solid var(--primary); padding: 5px; text-align: center;">' + row[i] + '</td>';
-        });
-        html += '</tr>';
-    });
-    html += '</table>';
-    container.innerHTML = html;
-}
-
 function clearCipher() {
     document.getElementById('cipherIn').value = "";
     document.getElementById('cipherKey').value = "";
     document.getElementById('cipherOut').value = "";
-    document.getElementById('cipherTableBox').innerHTML = "";
 }
-
 function copyCipher() {
     const out = document.getElementById('cipherOut');
     out.select();
     document.execCommand('copy');
     alert("Nusxalandi!");
-}
-
-function getYoutubeID(url) {
-    if (!url) return "";
-    const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length == 11) ? match[2] : url.split('/').pop();
 }
