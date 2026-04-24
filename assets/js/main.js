@@ -17,17 +17,28 @@ const firebaseConfig = {
 };
 
 let db;
+// Robust Mock DB with cross-tab and real-time support
 const listeners = [];
+const getMockData = () => JSON.parse(localStorage.getItem('vd_mock_db') || '{}');
+const setMockData = (data) => localStorage.setItem('vd_mock_db', JSON.stringify(data));
+
 const triggerListeners = () => {
-    const data = JSON.parse(localStorage.getItem('vd_mock_db') || '{}');
+    const data = getMockData();
     listeners.forEach(l => {
         const parts = l.path.split('/').filter(p => p);
         let target = data;
-        for (const p of parts) target = target[p] || {};
-        const val = (Object.keys(target).length === 0 && l.partsLength > 0 ? null : target);
+        for (const p of parts) target = (target && target[p]) ? target[p] : null;
+        
+        // Handle null/empty cases correctly for Firebase behavior
+        const val = (target === null || (typeof target === 'object' && Object.keys(target).length === 0)) ? null : target;
         l.cb({ val: () => val });
     });
 };
+
+// Listen for cross-tab updates
+window.addEventListener('storage', (e) => {
+    if (e.key === 'vd_mock_db') triggerListeners();
+});
 
 if (firebaseConfig.apiKey === "YOUR_API_KEY") {
     db = {
@@ -38,14 +49,15 @@ if (firebaseConfig.apiKey === "YOUR_API_KEY") {
                 triggerListeners();
             },
             once: (event, cb) => {
-                const data = JSON.parse(localStorage.getItem('vd_mock_db') || '{}');
+                const data = getMockData();
                 const parts = path.split('/').filter(p => p);
                 let target = data;
-                for (const p of parts) target = target[p] || {};
-                cb({ val: () => (Object.keys(target).length === 0 ? null : target) });
+                for (const p of parts) target = (target && target[p]) ? target[p] : null;
+                const val = (target === null || (typeof target === 'object' && Object.keys(target).length === 0)) ? null : target;
+                cb({ val: () => val });
             },
             set: (val) => {
-                const data = JSON.parse(localStorage.getItem('vd_mock_db') || '{}');
+                const data = getMockData();
                 const parts = path.split('/').filter(p => p);
                 let curr = data;
                 for (let i = 0; i < parts.length - 1; i++) {
@@ -53,27 +65,30 @@ if (firebaseConfig.apiKey === "YOUR_API_KEY") {
                     curr = curr[parts[i]];
                 }
                 curr[parts[parts.length - 1]] = val;
-                localStorage.setItem('vd_mock_db', JSON.stringify(data));
+                setMockData(data);
                 triggerListeners();
                 return Promise.resolve();
             },
             update: (val) => {
-                const data = JSON.parse(localStorage.getItem('vd_mock_db') || '{}');
+                const data = getMockData();
                 const parts = path.split('/').filter(p => p);
                 let curr = data;
-                for (const p of parts) curr = curr[p] || (curr[p] = {});
+                for (const p of parts) {
+                    if (!curr[p]) curr[p] = {};
+                    curr = curr[p];
+                }
                 Object.assign(curr, val);
-                localStorage.setItem('vd_mock_db', JSON.stringify(data));
+                setMockData(data);
                 triggerListeners();
                 return Promise.resolve();
             },
             remove: () => {
-                const data = JSON.parse(localStorage.getItem('vd_mock_db') || '{}');
+                const data = getMockData();
                 const parts = path.split('/').filter(p => p);
                 let curr = data;
                 for (let i = 0; i < parts.length - 1; i++) curr = curr[parts[i]];
-                delete curr[parts[parts.length - 1]];
-                localStorage.setItem('vd_mock_db', JSON.stringify(data));
+                if (curr) delete curr[parts[parts.length - 1]];
+                setMockData(data);
                 triggerListeners();
                 return Promise.resolve();
             }
@@ -128,14 +143,14 @@ window.app = {
             nav.style.display = 'none';
         } else {
             nav.style.display = 'block';
-            userInfo.innerText = state.isAdmin ? "ADMIN" : `${state.user.firstName} ${state.user.lastName}`;
+            userInfo.innerText = state.isAdmin ? "ADMIN" : (state.user ? `${state.user.firstName} ${state.user.lastName}` : "");
         }
     },
 
     // --- Helpers ---
     extractVidId(url) {
         if (!url) return "";
-        if (url.length === 11) return url; // Already an ID
+        if (url.length === 11) return url;
         const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
         const match = url.match(regExp);
         return (match && match[2].length === 11) ? match[2] : url;
@@ -218,6 +233,7 @@ window.app = {
             } else {
                 state.videos = Object.values(val).sort((a,b) => a.id - b.id);
             }
+            // Always re-render if we are on a dashboard
             if (state.activePage === 'page-student-dashboard') this.renderStudentDashboard();
             if (state.activePage === 'page-admin-dashboard') this.renderAdminDashboard();
         });
@@ -227,6 +243,12 @@ window.app = {
         const grid = document.getElementById('video-grid');
         if (!grid) return;
         const userProgress = state.user?.stats?.progress || 0;
+        
+        if (state.videos.length === 0) {
+            grid.innerHTML = "<p style='grid-column: 1/-1; text-align: center; opacity: 0.5;'>Hozircha darslar yo'q.</p>";
+            return;
+        }
+
         grid.innerHTML = state.videos.map((v, i) => {
             const isLocked = i > userProgress;
             const isCompleted = i < userProgress;
@@ -237,7 +259,10 @@ window.app = {
                         ${isLocked ? '<div class="lock-overlay">🔒</div>' : ''}
                         ${isCompleted ? '<div class="check-overlay">✅</div>' : ''}
                     </div>
-                    <div class="card-info"><h3>${v.title}</h3><p>${isLocked ? 'Qulflangan' : (isCompleted ? 'Tugatildi' : 'Hozirgi dars')}</p></div>
+                    <div class="card-info">
+                        <h3>${v.title}</h3>
+                        <p>${isLocked ? 'Qulflangan' : (isCompleted ? 'Tugatildi' : 'Hozirgi dars')}</p>
+                    </div>
                 </div>
             `;
         }).join('');
@@ -245,7 +270,7 @@ window.app = {
         if (userProgress >= state.videos.length && state.videos.length > 0) {
             const certBox = document.createElement('div');
             certBox.className = 'cert-promo-card';
-            certBox.innerHTML = `<h3>TABRIKLAYMIZ! 🎓</h3><p>Sertifikatga loyiq topildingiz.</p><button class="btn btn-primary" onclick="app.showCertificate()">SERTIFIKATNI OLISH</button>`;
+            certBox.innerHTML = `<h3>TABRIKLAYMIZ! 🎓</h3><p>Siz kursni to'liq yakunladingiz.</p><button class="btn btn-primary" onclick="app.showCertificate()">SERTIFIKATNI OLISH</button>`;
             grid.prepend(certBox);
         }
     },
@@ -253,6 +278,10 @@ window.app = {
     renderAdminDashboard() {
         const list = document.getElementById('admin-video-list');
         if (!list) return;
+        if (state.videos.length === 0) {
+            list.innerHTML = "<p style='text-align: center; opacity: 0.5; padding: 2rem;'>Darslar qo'shilmagan.</p>";
+            return;
+        }
         list.innerHTML = state.videos.map(v => `
             <div class="admin-video-card">
                 <div class="vid-preview"><img src="https://img.youtube.com/vi/${v.vidId}/mqdefault.jpg"></div>
@@ -290,7 +319,6 @@ window.app = {
         const title = document.getElementById('edit-vid-title').value.trim();
         const rawVid = document.getElementById('edit-vid-id').value.trim();
         if (!title || !rawVid) return alert("To'ldiring!");
-
         const vidId = this.extractVidId(rawVid);
 
         if (state.editingVideoId) {
@@ -301,8 +329,8 @@ window.app = {
             const id = Date.now();
             const questions = Array.from({length: 10}, (_, i) => ({
                 q: `${title} bo'yicha ${i+1}-savol?`,
-                a: ["Variant A", "Variant B", "Variant C", "Variant D"],
-                c: "Variant A"
+                a: ["A variant", "B variant", "C variant", "D variant"],
+                c: "A variant"
             }));
             db.ref('videos/' + id).set({ id, title, vidId, questions }).then(() => {
                 alert("Qo'shildi!"); this.closeModal('modal-video');
@@ -352,11 +380,9 @@ window.app = {
         });
     },
 
-    // --- UI Helpers ---
     openModal(id) { document.getElementById(id).style.display = 'flex'; document.body.style.overflow = 'hidden'; },
     closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = 'auto'; },
 
-    // --- Student Flow ---
     openLesson(idx) {
         const userProgress = state.user?.stats?.progress || 0;
         if (idx > userProgress) return alert("Avvalgi darslarni yakunlang!");
@@ -424,7 +450,8 @@ window.app = {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
         if (event && event.target && event.target.classList) event.target.classList.add('active');
-        document.getElementById('tab-' + tab).classList.add('active');
+        const target = document.getElementById('tab-' + tab);
+        if (target) target.classList.add('active');
         if (tab === 'results') this.renderResults();
     }
 };
