@@ -615,8 +615,33 @@ function renderDashboard() {
         const isLocked = i > (foydalanuvchi.stats.progress || 0);
         const card = document.createElement('div');
         card.className = `lesson-card ${isLocked ? 'locked' : ''}`;
-        card.innerHTML = `<h3>${d.t}</h3><p>${isLocked ? '🔒 Qulflangan' : '✅ Ochiq'}</p>`;
-        if (!isLocked) card.onclick = () => { joriyDars = d; showPage('lessonPage'); document.getElementById('lessonTitle').innerText = d.t; document.getElementById('lessonVideo').src = d.v; };
+        
+        // Extract YouTube ID
+        let ytId = "";
+        if (d.v.includes('embed/')) ytId = d.v.split('embed/')[1].split('?')[0];
+        else if (d.v.includes('v=')) ytId = d.v.split('v=')[1].split('&')[0];
+        else if (d.v.includes('youtu.be/')) ytId = d.v.split('youtu.be/')[1].split('?')[0];
+        
+        const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg` : 'assets/img/video-placeholder.jpg';
+        
+        card.innerHTML = `
+            <div class="lesson-thumb" style="background-image: url('${thumbUrl}')">
+                ${isLocked ? '<div class="lock-overlay">🔒</div>' : ''}
+            </div>
+            <div class="lesson-info">
+                <h3>${d.t}</h3>
+                <p class="status">${isLocked ? 'Qulflangan' : '✅ Ochiq'}</p>
+            </div>
+        `;
+        
+        if (!isLocked) {
+            card.onclick = () => { 
+                joriyDars = d; 
+                showPage('lessonPage'); 
+                document.getElementById('lessonTitle').innerText = d.t; 
+                document.getElementById('lessonVideo').src = d.v; 
+            };
+        }
         grid.appendChild(card);
     });
 }
