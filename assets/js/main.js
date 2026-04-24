@@ -17,7 +17,6 @@ const firebaseConfig = {
 };
 
 let db;
-// Robust Mock DB with cross-tab and real-time support
 const listeners = [];
 const getMockData = () => JSON.parse(localStorage.getItem('vd_mock_db') || '{}');
 const setMockData = (data) => localStorage.setItem('vd_mock_db', JSON.stringify(data));
@@ -28,14 +27,11 @@ const triggerListeners = () => {
         const parts = l.path.split('/').filter(p => p);
         let target = data;
         for (const p of parts) target = (target && target[p]) ? target[p] : null;
-        
-        // Handle null/empty cases correctly for Firebase behavior
         const val = (target === null || (typeof target === 'object' && Object.keys(target).length === 0)) ? null : target;
         l.cb({ val: () => val });
     });
 };
 
-// Listen for cross-tab updates
 window.addEventListener('storage', (e) => {
     if (e.key === 'vd_mock_db') triggerListeners();
 });
@@ -105,8 +101,6 @@ const state = {
     videos: [],
     activePage: 'page-landing',
     currentLesson: null,
-    comp: { isStarted: false },
-    timerInterval: null,
     editingVideoId: null
 };
 
@@ -147,7 +141,6 @@ window.app = {
         }
     },
 
-    // --- Helpers ---
     extractVidId(url) {
         if (!url) return "";
         if (url.length === 11) return url;
@@ -156,7 +149,6 @@ window.app = {
         return (match && match[2].length === 11) ? match[2] : url;
     },
 
-    // --- Auth ---
     register() {
         const f = document.getElementById('reg-firstname').value.trim();
         const l = document.getElementById('reg-lastname').value.trim();
@@ -219,21 +211,19 @@ window.app = {
         });
     },
 
-    // --- Content Management ---
     listenToGlobalVideos() {
         db.ref('videos').on('value', snap => {
-            const val = snap.val();
-            if (!val) {
-                state.videos = defaultData;
-                if (state.isAdmin) {
-                    const seed = {};
-                    defaultData.forEach(v => seed[v.id] = v);
-                    db.ref('videos').set(seed);
-                }
-            } else {
-                state.videos = Object.values(val).sort((a,b) => a.id - b.id);
+            let val = snap.val();
+            
+            // Critical Fix: If DB is empty, initialize with defaultData for everyone
+            if (!val || Object.keys(val).length === 0) {
+                val = {};
+                defaultData.forEach(v => val[v.id] = v);
+                // Only admin can persist this to the DB permanently, but everyone gets it in state
+                if (state.isAdmin) db.ref('videos').set(val);
             }
-            // Always re-render if we are on a dashboard
+            
+            state.videos = Object.values(val).sort((a,b) => a.id - b.id);
             if (state.activePage === 'page-student-dashboard') this.renderStudentDashboard();
             if (state.activePage === 'page-admin-dashboard') this.renderAdminDashboard();
         });
@@ -244,11 +234,6 @@ window.app = {
         if (!grid) return;
         const userProgress = state.user?.stats?.progress || 0;
         
-        if (state.videos.length === 0) {
-            grid.innerHTML = "<p style='grid-column: 1/-1; text-align: center; opacity: 0.5;'>Hozircha darslar yo'q.</p>";
-            return;
-        }
-
         grid.innerHTML = state.videos.map((v, i) => {
             const isLocked = i > userProgress;
             const isCompleted = i < userProgress;
@@ -278,10 +263,6 @@ window.app = {
     renderAdminDashboard() {
         const list = document.getElementById('admin-video-list');
         if (!list) return;
-        if (state.videos.length === 0) {
-            list.innerHTML = "<p style='text-align: center; opacity: 0.5; padding: 2rem;'>Darslar qo'shilmagan.</p>";
-            return;
-        }
         list.innerHTML = state.videos.map(v => `
             <div class="admin-video-card">
                 <div class="vid-preview"><img src="https://img.youtube.com/vi/${v.vidId}/mqdefault.jpg"></div>
@@ -450,8 +431,7 @@ window.app = {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
         if (event && event.target && event.target.classList) event.target.classList.add('active');
-        const target = document.getElementById('tab-' + tab);
-        if (target) target.classList.add('active');
+        document.getElementById('tab-' + tab).classList.add('active');
         if (tab === 'results') this.renderResults();
     }
 };
