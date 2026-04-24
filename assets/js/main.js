@@ -17,6 +17,7 @@ const firebaseConfig = {
 };
 
 let db;
+// Robust Mock DB
 const listeners = [];
 const getMockData = () => JSON.parse(localStorage.getItem('vd_mock_db') || '{}');
 const setMockData = (data) => localStorage.setItem('vd_mock_db', JSON.stringify(data));
@@ -106,6 +107,14 @@ const state = {
 
 window.app = {
     init() {
+        // First, ensure default data is in the DB if it's completely empty
+        const currentDB = getMockData();
+        if (!currentDB.videos || Object.keys(currentDB.videos).length === 0) {
+            const initial = {};
+            defaultData.forEach(v => initial[v.id] = v);
+            db.ref('videos').set(initial);
+        }
+
         this.listenToGlobalVideos();
         if (state.user) {
             this.syncUser();
@@ -152,13 +161,13 @@ window.app = {
     register() {
         const f = document.getElementById('reg-firstname').value.trim();
         const l = document.getElementById('reg-lastname').value.trim();
-        if (!f || !l) return alert("To'ldiring!");
+        if (!f || !l) return alert("Ism va familiyani kiriting!");
         const u = (f + "_" + l).toLowerCase().replace(/\s+/g, '') + "_" + Math.floor(1000 + Math.random() * 8999);
         db.ref('users/' + u).set({
             firstName: f, lastName: l, username: u,
             stats: { progress: 0, correct: 0, incorrect: 0, score: 0 }
         }).then(() => {
-            alert("Login: " + u);
+            alert("Sizning login: " + u);
             document.getElementById('login-username').value = u;
             this.showPage('page-student-login');
         });
@@ -166,7 +175,7 @@ window.app = {
 
     studentLogin() {
         const u = document.getElementById('login-username').value.trim();
-        if (!u) return alert("Login!");
+        if (!u) return alert("Loginni kiriting!");
         db.ref('users/' + u).once('value', snap => {
             const data = snap.val();
             if (data) {
@@ -176,7 +185,7 @@ window.app = {
                 localStorage.setItem('vd_is_admin', 'false');
                 this.syncUser();
                 this.showPage('page-student-dashboard');
-            } else alert("Xato!");
+            } else alert("Xato! Login topilmadi.");
         });
     },
 
@@ -213,19 +222,12 @@ window.app = {
 
     listenToGlobalVideos() {
         db.ref('videos').on('value', snap => {
-            let val = snap.val();
-            
-            // Critical Fix: If DB is empty, initialize with defaultData for everyone
-            if (!val || Object.keys(val).length === 0) {
-                val = {};
-                defaultData.forEach(v => val[v.id] = v);
-                // Only admin can persist this to the DB permanently, but everyone gets it in state
-                if (state.isAdmin) db.ref('videos').set(val);
+            const val = snap.val();
+            if (val) {
+                state.videos = Object.values(val).sort((a,b) => Number(a.id) - Number(b.id));
+                if (state.activePage === 'page-student-dashboard') this.renderStudentDashboard();
+                if (state.activePage === 'page-admin-dashboard') this.renderAdminDashboard();
             }
-            
-            state.videos = Object.values(val).sort((a,b) => a.id - b.id);
-            if (state.activePage === 'page-student-dashboard') this.renderStudentDashboard();
-            if (state.activePage === 'page-admin-dashboard') this.renderAdminDashboard();
         });
     },
 
@@ -255,7 +257,7 @@ window.app = {
         if (userProgress >= state.videos.length && state.videos.length > 0) {
             const certBox = document.createElement('div');
             certBox.className = 'cert-promo-card';
-            certBox.innerHTML = `<h3>TABRIKLAYMIZ! 🎓</h3><p>Siz kursni to'liq yakunladingiz.</p><button class="btn btn-primary" onclick="app.showCertificate()">SERTIFIKATNI OLISH</button>`;
+            certBox.innerHTML = `<h3>TABRIKLAYMIZ! 🎓</h3><p>Kursni muvaffaqiyatli tugatdingiz.</p><button class="btn btn-primary" onclick="app.showCertificate()">SERTIFIKATNI OLISH</button>`;
             grid.prepend(certBox);
         }
     },
@@ -387,6 +389,8 @@ window.app = {
         this.openModal('lesson-test-overlay');
     },
 
+    closeLessonTest() { this.closeModal('lesson-test-overlay'); },
+
     submitLessonTest() {
         const questions = state.currentLesson.questions || [];
         let correct = 0; let answered = 0;
@@ -431,7 +435,8 @@ window.app = {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
         if (event && event.target && event.target.classList) event.target.classList.add('active');
-        document.getElementById('tab-' + tab).classList.add('active');
+        const target = document.getElementById('tab-' + tab);
+        if (target) target.classList.add('active');
         if (tab === 'results') this.renderResults();
     }
 };
