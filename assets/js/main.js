@@ -589,7 +589,14 @@ function renderAdminUserStats() {
         body.innerHTML = "";
         Object.entries(users).forEach(([id, u]) => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td><strong>${u.firstName} ${u.lastName}</strong></td><td>${u.stats.progress || 0}</td><td>T: ${u.stats.correct} | X: ${u.stats.incorrect}</td><td><button class="btn btn-outline" onclick="deleteUser('${id}')">O'CHIRISH</button></td>`;
+            const ticket = u.stats.ticketId || '-';
+            tr.innerHTML = `
+                <td><strong>${u.firstName} ${u.lastName}</strong></td>
+                <td style="color: var(--primary); font-weight: 700;">${ticket}</td>
+                <td>${u.stats.progress || 0}</td>
+                <td>T: ${u.stats.correct} | X: ${u.stats.incorrect}</td>
+                <td style="text-align: center;"><button class="btn btn-outline" style="border-color: var(--accent); color: var(--accent); font-size: 0.7rem;" onclick="deleteUser('${id}')">O'CHIRISH</button></td>
+            `;
             body.appendChild(tr);
         });
     });
