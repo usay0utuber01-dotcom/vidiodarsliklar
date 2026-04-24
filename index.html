@@ -152,7 +152,11 @@
             </div>
             
             <div id="tab-videos" class="admin-tab-content active">
-                <div id="admin-video-list"></div>
+                <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <h3>Darslar Boshqaruvi</h3>
+                    <button class="btn btn-primary" onclick="app.openAddVideoModal()">YANGI DARS QO'SHISH +</button>
+                </div>
+                <div id="admin-video-list" class="admin-list-grid"></div>
             </div>
 
             <div id="tab-competition" class="admin-tab-content">
@@ -196,6 +200,38 @@
             </div>
         </section>
 
+    </div>
+
+    <!-- Modals for Admin -->
+    <!-- Video Modal -->
+    <div id="modal-video" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <h3 id="video-modal-title">Dars Qo'shish</h3>
+            <div class="input-group">
+                <label>Dars Sarlavhasi</label>
+                <input type="text" id="edit-vid-title" placeholder="1-Dars: Kirish">
+            </div>
+            <div class="input-group">
+                <label>YouTube Video ID</label>
+                <input type="text" id="edit-vid-id" placeholder="bKpcVgAQYk4">
+            </div>
+            <div class="modal-btns">
+                <button class="btn btn-primary" onclick="app.saveVideo()">SAQLASH_</button>
+                <button class="btn btn-link" onclick="app.closeModal('modal-video')">BEKOR QILISH</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Editor Modal -->
+    <div id="modal-test-editor" class="modal-overlay" style="display: none;">
+        <div class="modal-card large">
+            <h3>Testlarni Tahrirlash</h3>
+            <div id="test-editor-container" class="test-editor-list"></div>
+            <div class="modal-btns">
+                <button class="btn btn-primary" onclick="app.saveEditedTest()">BARCHASINI SAQLASH_</button>
+                <button class="btn btn-link" onclick="app.closeModal('modal-test-editor')">YOPISH</button>
+            </div>
+        </div>
     </div>
 
     <!-- Main Script -->
