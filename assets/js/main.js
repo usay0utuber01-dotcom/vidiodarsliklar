@@ -91,6 +91,16 @@ let isAdmin = localStorage.getItem('vd_admin') === 'true';
 let joriyDars = null;
 let joriyTestTuri = 'lesson'; 
 let activeCompetition = null;
+let timerInterval = null;
+
+// Load persisted bilets if they exist
+const savedBilets = localStorage.getItem('cyber_bilets');
+if (savedBilets) {
+    try {
+        const parsed = JSON.parse(savedBilets);
+        Object.assign(defaultBiletlar, parsed);
+    } catch(e) { console.error("Error loading bilets", e); }
+}
 
 function init() {
     setupEventListeners();
@@ -112,6 +122,13 @@ function init() {
     db.ref('competition').on('value', (snapshot) => {
         activeCompetition = snapshot.val();
         if (document.getElementById('compAuthPage').classList.contains('active')) renderCompAuthPage();
+        
+        // Timer Logic
+        if (activeCompetition && activeCompetition.isStarted && activeCompetition.startTime) {
+            startCountdown();
+        } else {
+            stopCountdown();
+        }
     });
 }
 
@@ -224,6 +241,22 @@ function renderCompAuthPage() {
     if (activeCompetition && activeCompetition.isActive) {
         noComp.style.display = 'none';
         joinComp.style.display = 'block';
+        
+        // If already started, and user is logged in, and user has ticket, show "Boshlash" button
+        if (activeCompetition.isStarted) {
+            document.getElementById('joinCompBox').innerHTML = `
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🔥</div>
+                <h3 style="color: var(--primary);">BELLASHUV BOSHLANDI!</h3>
+                <p style="margin-bottom: 1.5rem;">Sizga biriktirilgan bilet: <strong>${foydalanuvchi.stats.ticketId || 'BIRIKTIRILMAGAN'}</strong></p>
+                <button class="btn btn-primary" onclick="startCompetition(${foydalanuvchi.stats.ticketId})" style="width: 100%;">SAVOLLARNI KO'RISH_</button>
+            `;
+        } else {
+            document.getElementById('joinCompBox').innerHTML = `
+                <p style="margin-bottom: 1.5rem;">Bellashuvda qatnashish uchun admin tomonidan berilgan 4 xonali kodni kiriting:</p>
+                <input type="password" id="compJoinCode" class="old-input" placeholder="XXXX" maxlength="4" style="text-align: center; font-size: 2rem; letter-spacing: 10px;">
+                <button class="btn btn-primary" onclick="verifyCompCode()" style="width: 100%;">BELLASHUVGA KIRISH_</button>
+            `;
+        }
     } else {
         noComp.style.display = 'block';
         joinComp.style.display = 'none';
@@ -234,7 +267,8 @@ window.verifyCompCode = function() {
     const code = document.getElementById('compJoinCode').value.trim();
     if (code === activeCompetition.code) {
         if (!foydalanuvchi.stats.ticketId) return alert("Sizga hali bilet biriktirilmagan! Admindan so'rang.");
-        startCompetition(foydalanuvchi.stats.ticketId);
+        alert("Kod tasdiqlandi! Admin 'START' tugmasini bosishini kuting.");
+        // We could set a local flag or just wait for activeCompetition.isStarted to change
     } else {
         alert("Noto'g'ri kod!");
     }
@@ -248,52 +282,145 @@ function startCompetition(id) {
     let html = "";
     questions.forEach((q, i) => {
         let opts = "";
-        q.a.forEach(opt => opts += `<label class="option-label"><input type="radio" name="cq${i}" value="${opt}"> ${opt}</label>`);
+        q.a.forEach(opt => opts += `<label class="option-label"><input type="radio" name="cq${i}" value="${opt}" onchange="answerCompQuestion(${i}, this.value)"> ${opt}</label>`);
         html += `<div class="card" style="margin-bottom: 1.5rem;">
             <p style="font-weight: 700; margin-bottom: 1rem;">${i+1}. ${q.q}</p>
             <div class="test-options">${opts}</div>
+            <div id="status_cq${i}" style="margin-top: 0.5rem; font-size: 0.8rem; font-weight: 700;"></div>
         </div>`;
     });
     container.innerHTML = html;
     showPage('competitionTestPage');
 }
 
-window.submitCompTest = function() {
+window.answeredQuestions = {}; // Track which questions were answered in this session
+
+window.answerCompQuestion = function(qIdx, val) {
+    if (window.answeredQuestions[qIdx]) return; // Prevent re-answering for scoring
+    
     const questions = defaultBiletlar[foydalanuvchi.stats.ticketId];
-    let correct = 0, incorrect = 0;
-    questions.forEach((q, i) => {
-        const sel = document.querySelector(`input[name="cq${i}"]:checked`);
-        if (sel && sel.value === q.c) correct++; else incorrect++;
-    });
+    const q = questions[qIdx];
+    const isCorrect = val === q.c;
+    
+    window.answeredQuestions[qIdx] = true;
+    
+    // Disable other inputs for this question
+    document.querySelectorAll(`input[name="cq${qIdx}"]`).forEach(inp => inp.disabled = true);
+    
+    const statusEl = document.getElementById(`status_cq${qIdx}`);
+    if (isCorrect) {
+        statusEl.innerText = "TO'G'RI! ✅";
+        statusEl.style.color = "#2ecc71";
+    } else {
+        statusEl.innerText = `XATO! ❌ (To'g'ri javob: ${q.c})`;
+        statusEl.style.color = "#e74c3c";
+    }
+
+    // Update DB real-time
     db.ref('users/' + foydalanuvchi.id + '/stats').update({
-        correct: (foydalanuvchi.stats.correct || 0) + correct,
-        incorrect: (foydalanuvchi.stats.incorrect || 0) + incorrect,
-        lastSeen: new Date().toLocaleString()
-    }).then(() => {
-        alert("Natijangiz yuborildi!");
-        showPage('dashboardPage');
+        correct: (foydalanuvchi.stats.correct || 0) + (isCorrect ? 1 : 0),
+        incorrect: (foydalanuvchi.stats.incorrect || 0) + (isCorrect ? 0 : 1),
+            lastSeen: new Date().toLocaleString()
     });
+}
+
+window.submitCompTest = function() {
+    alert("Barcha javoblaringiz saqlandi!");
+    showPage('dashboardPage');
 }
 
 // Admin Competition Setup
 window.openCompSetup = function() {
     document.getElementById('compSetupModal').style.display = 'flex';
+    renderCompSetupButtons();
 }
+
 window.closeCompSetup = function() {
     document.getElementById('compSetupModal').style.display = 'none';
 }
+
 window.startNewCompetition = function() {
     const code = document.getElementById('newCompCode').value.trim();
     if (code.length !== 4) return alert("4 xonali kod kiriting!");
-    db.ref('competition').set({ isActive: true, code: code }).then(() => {
-        alert("Bellashuv boshlandi!");
-        closeCompSetup();
-        toggleAdminView('leaderboard');
+    db.ref('competition').set({ isActive: true, code: code, isStarted: false }).then(() => {
+        alert("Bellashuv yaratildi! Endi 'START' tugmasini bosing.");
+        renderCompSetupButtons();
     });
 }
+
+window.startExamAction = function() {
+    const startTime = Date.now();
+    db.ref('competition').update({ isStarted: true, startTime: startTime, duration: 30 * 60 * 1000 }).then(() => {
+        alert("Bellashuv BOSHLANDI! Talabalar savollarni ko'rishlari mumkin.");
+        closeCompSetup();
+    });
+}
+
+function startCountdown() {
+    if (timerInterval) clearInterval(timerInterval);
+    
+    const updateTimerUI = () => {
+        const now = Date.now();
+        const start = activeCompetition.startTime;
+        const duration = activeCompetition.duration || (30 * 60 * 1000);
+        const diff = (start + duration) - now;
+        
+        if (diff <= 0) {
+            const timeStr = "00:00";
+            document.getElementById('studentTimer').innerText = timeStr;
+            const adminT = document.getElementById('adminTimer');
+            if (adminT) adminT.innerText = timeStr;
+            
+            clearInterval(timerInterval);
+            if (joriyTestTuri === 'competition') {
+                alert("Vaqt tugadi! Test avtomatik yopiladi.");
+                showPage('dashboardPage');
+            }
+            return;
+        }
+        
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        const studentT = document.getElementById('studentTimer');
+        if (studentT) studentT.innerText = timeStr;
+        
+        const adminT = document.getElementById('adminTimer');
+        const adminMsg = document.getElementById('adminTimerMsg');
+        if (adminT) {
+            adminT.innerText = timeStr;
+            adminT.style.display = 'inline-block';
+            if (adminMsg) adminMsg.style.display = 'none';
+        }
+    };
+    
+    updateTimerUI();
+    timerInterval = setInterval(updateTimerUI, 1000);
+}
+
+function stopCountdown() {
+    if (timerInterval) clearInterval(timerInterval);
+    const adminT = document.getElementById('adminTimer');
+    const adminMsg = document.getElementById('adminTimerMsg');
+    if (adminT) adminT.style.display = 'none';
+    if (adminMsg) adminMsg.style.display = 'block';
+}
+
+function renderCompSetupButtons() {
+    const container = document.querySelector('#compSetupModal div div:last-child');
+    if (activeCompetition && activeCompetition.isActive) {
+        container.innerHTML = `
+            <button class="btn btn-primary" onclick="startExamAction()" style="background: #2ecc71;">START (TALABALARGA YUBORISH)_</button>
+            <button class="btn btn-outline" onclick="stopCompetition()" style="border-color: var(--accent); color: var(--accent);">BELLASHUVNI YOPISH_</button>
+            <button class="btn btn-outline" style="border:none;" onclick="closeCompSetup()">BEKOR QILISH</button>
+        `;
+    }
+}
+
 window.stopCompetition = function() {
     if (confirm("Bellashuvni to'xtatmoqchimisiz?")) {
-        db.ref('competition').update({ isActive: false }).then(() => {
+        db.ref('competition').set({ isActive: false, isStarted: false }).then(() => {
             alert("Bellashuv to'xtatildi!");
             closeCompSetup();
         });
@@ -484,10 +611,134 @@ function listenLeaderboard() {
 window.distributeTickets = function() {
     db.ref('users').once('value', (snapshot) => {
         const users = snapshot.val();
+        if (!users) return;
         const updates = {};
-        Object.keys(users).forEach(id => updates[`users/${id}/stats/ticketId`] = Math.floor(Math.random()*20)+1);
+        const biletIds = Object.keys(defaultBiletlar);
+        if (biletIds.length === 0) return alert("Hali biletlar yaratilmagan!");
+        
+        Object.keys(users).forEach(id => {
+            const randomBiletId = biletIds[Math.floor(Math.random() * biletIds.length)];
+            updates[`users/${id}/stats/ticketId`] = randomBiletId;
+        });
         db.ref().update(updates).then(() => alert("Biletlar tarqatildi!"));
     });
+}
+
+// Bilet Manager Logic
+window.openBiletManager = function() {
+    document.getElementById('biletManagerModal').style.display = 'flex';
+    renderAdminBilets();
+}
+
+window.closeBiletManager = function() {
+    document.getElementById('biletManagerModal').style.display = 'none';
+}
+
+function renderAdminBilets() {
+    const container = document.getElementById('biletsList');
+    container.innerHTML = "";
+    
+    Object.entries(defaultBiletlar).forEach(([id, questions]) => {
+        const biletCard = document.createElement('div');
+        biletCard.className = "card";
+        biletCard.style.border = "1px solid var(--primary-glow)";
+        biletCard.style.background = "rgba(0,0,0,0.3)";
+        
+        let questionsHtml = "";
+        questions.forEach((q, qIdx) => {
+            questionsHtml += `
+                <div style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); position: relative;">
+                    <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
+                        <span style="color: var(--primary); font-weight: 800;">#${qIdx+1}</span>
+                        <input type="text" class="input-field b-q-text" data-bid="${id}" data-qidx="${qIdx}" value="${q.q}" placeholder="Savol..." style="flex: 1; font-size: 0.85rem;">
+                        <button onclick="removeQuestionFromBilet('${id}', ${qIdx})" style="background:none; border:none; color:var(--accent); cursor:pointer;">&times;</button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-left: 2rem;">
+                        <input type="text" class="input-field b-q-opt" data-bid="${id}" data-qidx="${qIdx}" data-oidx="0" value="${q.a[0]||''}" placeholder="A variant" style="font-size: 0.75rem;">
+                        <input type="text" class="input-field b-q-opt" data-bid="${id}" data-qidx="${qIdx}" data-oidx="1" value="${q.a[1]||''}" placeholder="B variant" style="font-size: 0.75rem;">
+                        <input type="text" class="input-field b-q-opt" data-bid="${id}" data-qidx="${qIdx}" data-oidx="2" value="${q.a[2]||''}" placeholder="C variant" style="font-size: 0.75rem;">
+                        <input type="text" class="input-field b-q-opt" data-bid="${id}" data-qidx="${qIdx}" data-oidx="3" value="${q.a[3]||''}" placeholder="D variant" style="font-size: 0.75rem;">
+                    </div>
+                    <div style="margin-left: 2rem; margin-top: 0.5rem;">
+                        <label style="font-size: 0.7rem; color: #2ecc71;">TO'G'RI JAVOB:</label>
+                        <select class="input-field b-q-ans" data-bid="${id}" data-qidx="${qIdx}" style="font-size: 0.75rem; width: auto; margin-left: 1rem;">
+                            <option value="0" ${q.a[0] === q.c ? 'selected' : ''}>A</option>
+                            <option value="1" ${q.a[1] === q.c ? 'selected' : ''}>B</option>
+                            <option value="2" ${q.a[2] === q.c ? 'selected' : ''}>C</option>
+                            <option value="3" ${q.a[3] === q.c ? 'selected' : ''}>D</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+        });
+
+        biletCard.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(0,210,255,0.05);">
+                <h4 style="margin:0; color: var(--primary);">BILET #${id}</h4>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-outline" style="font-size: 0.7rem; padding: 5px 10px;" onclick="addQuestionToBilet('${id}')">SAVOL QO'SHISH +</button>
+                    <button class="btn btn-outline" style="font-size: 0.7rem; padding: 5px 10px; border-color: var(--accent); color: var(--accent);" onclick="removeBilet('${id}')">BILETNI O'CHIRISH</button>
+                </div>
+            </div>
+            <div class="bilet-questions-container">
+                ${questionsHtml}
+            </div>
+        `;
+        container.appendChild(biletCard);
+    });
+}
+
+window.addBilet = function() {
+    const ids = Object.keys(defaultBiletlar).map(Number);
+    const nextId = ids.length > 0 ? Math.max(...ids) + 1 : 1;
+    defaultBiletlar[nextId] = [];
+    renderAdminBilets();
+}
+
+window.removeBilet = function(id) {
+    if (confirm(`Bilet #${id} ni o'chirmoqchimisiz?`)) {
+        delete defaultBiletlar[id];
+        renderAdminBilets();
+    }
+}
+
+window.addQuestionToBilet = function(id) {
+    if (defaultBiletlar[id].length >= 10) return alert("Bitta biletda maksimal 10 ta savol bo'lishi mumkin!");
+    defaultBiletlar[id].push({ q: "", a: ["", "", "", ""], c: "" });
+    renderAdminBilets();
+}
+
+window.removeQuestionFromBilet = function(id, qIdx) {
+    defaultBiletlar[id].splice(qIdx, 1);
+    renderAdminBilets();
+}
+
+window.saveBilets = function() {
+    const newBilets = {};
+    const biletBlocks = document.querySelectorAll('#biletsList > div');
+    
+    // Actually, it's easier to scrape the inputs
+    Object.keys(defaultBiletlar).forEach(bid => {
+        newBilets[bid] = [];
+        const qTexts = document.querySelectorAll(`.b-q-text[data-bid="${bid}"]`);
+        qTexts.forEach((el, qIdx) => {
+            const q = el.value;
+            const opts = Array.from(document.querySelectorAll(`.b-q-opt[data-bid="${bid}"][data-qidx="${qIdx}"]`)).map(o => o.value);
+            const ansIdx = document.querySelector(`.b-q-ans[data-bid="${bid}"][data-qidx="${qIdx}"]`).value;
+            const ans = opts[ansIdx] || "";
+            newBilets[bid].push({ q, a: opts.filter(v => v !== ""), c: ans });
+        });
+    });
+    
+    // Update the exported object (it's shared via import in this simulated environment)
+    // In a real app, this would be a DB call.
+    Object.assign(defaultBiletlar, newBilets);
+    
+    // Save to localStorage so it persists even in this mock environment
+    localStorage.setItem('cyber_bilets', JSON.stringify(defaultBiletlar));
+    
+    alert("Biletlar muvaffaqiyatli saqlandi!");
+    closeBiletManager();
 }
 
 window.exportToExcel = function() {
