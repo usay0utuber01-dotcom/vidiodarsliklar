@@ -875,11 +875,13 @@ select.input-field {
 
 /* Responsive */
 @media (max-width: 768px) {
-    .nav-links { display: none; }
+    .nav-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
     .login-title { font-size: 2rem; }
     .cert-title { font-size: 2.5rem; }
     .cert-name { font-size: 2rem; }
 }
+
+
 /* 
   =========================================
   RESPONSIVE DESIGN (MOBILE & TABLET)
@@ -892,76 +894,98 @@ select.input-field {
     }
 }
 
-@media (max-width: 768px) {
-    .navbar {
-        padding: 1rem 1.5rem;
-    }
-
-    .nav-links {
-        gap: 1rem;
-    }
-
-    .nav-item {
-        font-size: 0.75rem;
-    }
 
     .logo-big {
-        font-size: 4rem;
+        font-size: 3rem;
+        text-align: center;
     }
 
     #loginPage {
-        flex-direction: column;
-        height: auto;
-        padding-top: 2rem;
+        flex-direction: column !important;
+        height: auto !important;
+        padding: 2rem 1rem !important;
+        position: relative !important;
+        display: none;
+    }
+
+    #loginPage.active {
+        display: flex !important;
     }
 
     .login-left {
-        display: none; /* Hide trailer image on small mobile to focus on login */
+        display: none !important;
     }
 
     .login-right {
-        padding: 3rem 1.5rem;
-        min-height: 100vh;
-        justify-content: center;
+        width: 100% !important;
+        padding: 0 !important;
+        align-items: center !important;
+        text-align: center !important;
+    }
+
+    .old-input, .old-btn, .auth-tabs {
+        width: 100% !important;
+        max-width: 100% !important;
     }
 
     .lesson-grid {
         grid-template-columns: 1fr;
     }
 
-    .modal-content {
-        width: 95% !important;
-        padding: 1.5rem !important;
+    /* Admin View Fixes */
+    #adminDashboardPage > div:first-child {
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center;
+        gap: 1.5rem;
+    }
+
+    #adminDashboardPage div[style*="display: flex; gap: 1rem;"] {
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+
+    #adminDashboardPage .btn {
+        width: 100% !important;
     }
 
     .admin-table {
         display: block;
         overflow-x: auto;
+        white-space: nowrap;
     }
 
-    .certificate-box {
-        width: 100% !important;
+    .modal .card {
+        width: 95% !important;
         padding: 1.5rem !important;
-        transform: scale(0.9);
-        transform-origin: top center;
-    }
-}
-
-@media (max-width: 480px) {
-    .nav-links {
-        display: none; /* In a real app we'd add a burger menu, but for now we hide to save space */
+        max-height: 95vh;
     }
 
+    .cert-preview {
+        padding: 20px;
+        border-width: 8px;
+        transform: scale(0.6);
+        transform-origin: center top;
+        margin-bottom: -150px;
+    }
+
+    .cert-title { font-size: 2rem; }
+    .cert-name { font-size: 1.8rem; }
     .logo-big {
-        font-size: 3rem;
+        font-size: 2.5rem;
     }
 
     .card {
-        padding: 1.5rem;
+        padding: 1.2rem;
     }
 
     .btn {
-        padding: 0.8rem 1.2rem;
-        font-size: 0.8rem;
+        padding: 0.7rem 1rem;
+        font-size: 0.75rem;
+    }
+
+    .premium-timer {
+        font-size: 1rem;
+        padding: 0.3rem 0.6rem;
     }
 }
