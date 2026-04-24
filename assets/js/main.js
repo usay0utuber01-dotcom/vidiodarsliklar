@@ -1,673 +1,456 @@
-import { darslar as defaultDarslar, testlar as defaultTestlar, biletlar as defaultBiletlar } from './database.js';
-import { shifrlashVigenere, deshifrlashVigenere } from './cipher.js';
+import { defaultData } from './database.js';
 
 /**
  * ==========================================
- * FIREBASE CONFIGURATION
+ * ACADEMY TEST & COMPETITION PLATFORM
+ * Core Logic (main.js)
  * ==========================================
  */
+
+// 1. Firebase Mock / Initial Configuration
 const firebaseConfig = {
     apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+    projectId: "YOUR_PROJECT",
+    storageBucket: "YOUR_PROJECT.appspot.com",
     messagingSenderId: "YOUR_SENDER_ID",
     appId: "YOUR_APP_ID"
 };
 
 let db;
+let isMock = true;
+
+// Initialize Firebase or Mock
 if (firebaseConfig.apiKey === "YOUR_API_KEY") {
-    const getMockData = () => {
-        let data = JSON.parse(localStorage.getItem('cyber_mock_db') || '{}');
-        if (Object.keys(data).length === 0) {
-            data = {
-                users: {
-                    "ali_valiyev": { firstName: "Ali", lastName: "Valiyev", pin: "1111", stats: { correct: 15, incorrect: 2, progress: 5, ticketId: 1, lastSeen: "24.04.2026, 15:30" } },
-                    "nozim_hakimov": { firstName: "Nozim", lastName: "Hakimov", pin: "2222", stats: { correct: 8, incorrect: 5, progress: 3, ticketId: 2, lastSeen: "24.04.2026, 15:45" } },
-                    "dilshod_asqarov": { firstName: "Dilshod", lastName: "Asqarov", pin: "3333", stats: { correct: 20, incorrect: 0, progress: 10, ticketId: 3, lastSeen: "24.04.2026, 16:00" } }
-                },
-                competition: { isActive: false, code: "0000", isStarted: false }
-            };
-            localStorage.setItem('cyber_mock_db', JSON.stringify(data));
-        }
-        return data;
-    };
-    const saveMockData = (data) => localStorage.setItem('cyber_mock_db', JSON.stringify(data));
-    const setDeepValue = (obj, path, value) => {
-        const parts = path.split('/').filter(p => p);
-        let curr = obj;
-        for (let i = 0; i < parts.length - 1; i++) {
-            if (!curr[parts[i]]) curr[parts[i]] = {};
-            curr = curr[parts[i]];
-        }
-        curr[parts[parts.length - 1]] = value;
-    };
+    console.warn("Firebase config not found. Using LocalStorage Mock Mode.");
     db = {
-        ref: (path = "") => ({
-            on: (event, callback) => {
-                const data = getMockData();
+        ref: (path) => ({
+            on: (event, cb) => {
+                const data = JSON.parse(localStorage.getItem('academy_mock_db') || '{}');
                 const parts = path.split('/').filter(p => p);
                 let target = data;
                 for (const p of parts) target = target[p] || {};
-                callback({ val: () => (Object.keys(target).length === 0 ? null : target) });
+                cb({ val: () => (Object.keys(target).length === 0 && event === 'value' && parts.length > 0 ? null : target) });
+            },
+            once: (event, cb) => {
+                const data = JSON.parse(localStorage.getItem('academy_mock_db') || '{}');
+                const parts = path.split('/').filter(p => p);
+                let target = data;
+                for (const p of parts) target = target[p] || {};
+                cb({ val: () => (Object.keys(target).length === 0 ? null : target) });
             },
             set: (val) => {
-                const data = getMockData();
-                setDeepValue(data, path, val);
-                saveMockData(data);
+                const data = JSON.parse(localStorage.getItem('academy_mock_db') || '{}');
+                const parts = path.split('/').filter(p => p);
+                let curr = data;
+                for (let i = 0; i < parts.length - 1; i++) {
+                    if (!curr[parts[i]]) curr[parts[i]] = {};
+                    curr = curr[parts[i]];
+                }
+                curr[parts[parts.length - 1]] = val;
+                localStorage.setItem('academy_mock_db', JSON.stringify(data));
                 return Promise.resolve();
             },
             update: (val) => {
-                const data = getMockData();
-                Object.entries(val).forEach(([k, v]) => {
-                    const fullPath = path ? `${path}/${k}` : k;
-                    setDeepValue(data, fullPath, v);
-                });
-                saveMockData(data);
-                return Promise.resolve();
-            },
-            remove: () => {
-                const data = getMockData();
+                const data = JSON.parse(localStorage.getItem('academy_mock_db') || '{}');
                 const parts = path.split('/').filter(p => p);
                 let curr = data;
-                for (let i = 0; i < parts.length - 1; i++) curr = curr[parts[i]];
-                delete curr[parts[parts.length - 1]];
-                saveMockData(data);
+                for (const p of parts) curr = curr[p] || (curr[p] = {});
+                Object.assign(curr, val);
+                localStorage.setItem('academy_mock_db', JSON.stringify(data));
                 return Promise.resolve();
-            },
-            once: (event, callback) => {
-                const data = getMockData();
-                const parts = path.split('/').filter(p => p);
-                let target = data;
-                for (const p of parts) target = target[p] || {};
-                callback({ val: () => (Object.keys(target).length === 0 ? null : target) });
             }
         })
     };
 } else {
+    isMock = false;
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
 }
 
-// State
-let foydalanuvchi = JSON.parse(localStorage.getItem('cyber_user_session')) || null;
-let isAdmin = localStorage.getItem('vd_admin') === 'true';
-let joriyDars = null;
-let joriyTestTuri = 'lesson'; 
-let activeCompetition = null;
-let timerInterval = null;
+// 2. State Management
+const state = {
+    user: JSON.parse(localStorage.getItem('academy_session')) || null,
+    isAdmin: localStorage.getItem('academy_admin') === 'true',
+    activePage: 'page-landing',
+    videos: [],
+    comp: { isStarted: false, startTime: null, duration: 30 * 60 * 1000 },
+    currentQuestions: [],
+    currentQuestionIdx: 0,
+    userAnswers: [],
+    timerInterval: null
+};
 
-const savedBilets = localStorage.getItem('cyber_bilets');
-if (savedBilets) {
-    try {
-        const parsed = JSON.parse(savedBilets);
-        Object.assign(defaultBiletlar, parsed);
-    } catch(e) { console.error("Error loading bilets", e); }
-}
+// 3. Main App Controller
+window.app = {
+    init() {
+        this.showPage(state.user ? (state.isAdmin ? 'page-admin-dashboard' : 'page-student-dashboard') : 'page-landing');
+        this.listenToGlobalData();
+        this.updateNav();
+    },
 
-function init() {
-    setupEventListeners();
-    const savedAdmin = localStorage.getItem('vd_admin') === 'true';
-    const savedPage = localStorage.getItem('cyber_active_page');
-
-    if (firebaseConfig.apiKey === "YOUR_API_KEY") {
-        const badge = document.getElementById('demoBadge');
-        if (badge) badge.style.display = 'inline-block';
-    }
-
-    if (savedAdmin) {
-        isAdmin = true;
-        showPage(savedPage || 'adminDashboardPage');
-    } else if (foydalanuvchi) {
-        syncUserSession();
-        db.ref('users/' + foydalanuvchi.id + '/stats').update({ lastSeen: new Date().toLocaleString() });
-        showPage(savedPage || 'dashboardPage');
-    } else {
-        showPage('loginPage');
-    }
-    
-    db.ref('competition').on('value', (snapshot) => {
-        activeCompetition = snapshot.val() || { isActive: false };
-        updateCompetitionMenus();
-        if (document.getElementById('compAuthPage').classList.contains('active')) renderCompAuthPage();
-        if (activeCompetition && activeCompetition.isStarted && activeCompetition.startTime) startCountdown();
-        else stopCountdown();
-    });
-}
-
-function updateCompetitionMenus() {
-    const isActive = activeCompetition && activeCompetition.isActive;
-    const isStarted = activeCompetition && activeCompetition.isStarted;
-    
-    // Admin Buttons
-    const leaderBtn = document.getElementById('leaderboardToggleBtn');
-    if (leaderBtn) leaderBtn.style.display = isActive ? 'inline-block' : 'none';
-    
-    const distBtn = document.getElementById('distBtn');
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    
-    if (distBtn) distBtn.style.display = (isActive && !isStarted) ? 'block' : 'none';
-    if (startBtn) startBtn.style.display = (isActive && !isStarted) ? 'block' : 'none';
-    if (stopBtn) stopBtn.style.display = isStarted ? 'block' : 'none';
-
-    // Student Side Navbar
-    const compNavItem = document.querySelector('.nav-item[data-page="compAuthPage"]');
-    if (compNavItem) compNavItem.style.display = 'block';
-}
-
-window.addEventListener('DOMContentLoaded', init);
-
-function setupEventListeners() {
-    document.getElementById('loginBtn')?.addEventListener('click', login);
-    document.getElementById('registerBtn')?.addEventListener('click', register);
-    document.getElementById('adminLoginBtn')?.addEventListener('click', adminLogin);
-    document.getElementById('logoutBtn')?.addEventListener('click', logout);
-    document.querySelectorAll('[data-page]').forEach(el => {
-        el.addEventListener('click', (e) => showPage(e.currentTarget.getAttribute('data-page')));
-    });
-}
-
-window.switchAuth = function(type) {
-    document.getElementById('loginForm').style.display = type === 'login' ? 'block' : 'none';
-    document.getElementById('registerForm').style.display = type === 'register' ? 'block' : 'none';
-    document.getElementById('tabLogin').classList.toggle('active', type === 'login');
-    document.getElementById('tabRegister').classList.toggle('active', type === 'register');
-}
-
-async function register() {
-    const first = document.getElementById('regFirst').value.trim();
-    const last = document.getElementById('regLast').value.trim();
-    const code = document.getElementById('regCode').value.trim();
-    if (!first || !last || code.length !== 4) return alert("Xatolik!");
-    const userId = (first + "_" + last).toLowerCase().replace(/\s+/g, '');
-    db.ref('users/' + userId).set({
-        firstName: first, lastName: last, pin: code,
-        stats: { correct: 0, incorrect: 0, progress: 0, ticketId: null, lastSeen: new Date().toLocaleString() }
-    }).then(() => { alert("Ro'yxatdan o'tdingiz!"); switchAuth('login'); });
-}
-
-function login() {
-    const first = document.getElementById('loginFirst').value.trim();
-    const last = document.getElementById('loginLast').value.trim();
-    const code = document.getElementById('loginCode').value.trim();
-    const userId = (first + "_" + last).toLowerCase().replace(/\s+/g, '');
-    db.ref('users/' + userId).once('value', (snapshot) => {
-        const user = snapshot.val();
-        if (user && user.pin === code) {
-            foydalanuvchi = { id: userId, ...user };
-            localStorage.setItem('cyber_user_session', JSON.stringify(foydalanuvchi));
-            db.ref('users/' + userId + '/stats').update({ lastSeen: new Date().toLocaleString() });
-            syncUserSession();
-            showPage('dashboardPage');
-        } else alert("Xato!");
-    });
-}
-
-function syncUserSession() {
-    if (!foydalanuvchi) return;
-    db.ref('users/' + foydalanuvchi.id).on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data) { 
-            foydalanuvchi = { id: foydalanuvchi.id, ...data }; 
-            updateUI(); 
-            localStorage.setItem('cyber_user_session', JSON.stringify(foydalanuvchi));
-        }
-    });
-}
-
-function updateUI() {
-    const welcome = document.getElementById('welcomeMsg');
-    if (welcome && foydalanuvchi) welcome.innerText = `XUSH KELIBSIZ, ${foydalanuvchi.firstName} ${foydalanuvchi.lastName}_`.toUpperCase();
-}
-
-function showPage(id) {
-    if (id === 'adminDashboardPage' && !isAdmin) return showPage('adminLoginPage');
-    if (isAdmin && (id === 'dashboardPage' || id === 'compAuthPage')) {
+    showPage(id) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById('adminDashboardPage').classList.add('active');
-        if (id === 'dashboardPage') toggleAdminView('modules');
-        if (id === 'compAuthPage') toggleAdminView('leaderboard');
-        return;
-    }
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    const target = document.getElementById(id);
-    if (target) {
-        target.classList.add('active');
-        document.getElementById('navbar').style.display = (id === 'loginPage' || id === 'adminLoginPage') ? 'none' : 'flex';
-        if (id === 'dashboardPage') renderDashboard();
-        if (id === 'adminDashboardPage') { renderAdminDashboard(); toggleAdminView('modules'); }
-        if (id === 'compAuthPage') renderCompAuthPage();
-        if (id === 'profilePage') renderProfile();
-        localStorage.setItem('cyber_active_page', id);
+        document.getElementById(id).classList.add('active');
+        state.activePage = id;
+        this.updateNav();
+        
+        if (id === 'page-admin-dashboard') this.switchAdminTab('videos');
+        if (id === 'page-student-dashboard') this.renderStudentDashboard();
         window.scrollTo(0, 0);
-    }
-}
-window.showPage = showPage;
+    },
 
-function logout() {
-    localStorage.removeItem('cyber_user_session');
-    localStorage.removeItem('vd_admin');
-    localStorage.removeItem('cyber_active_page');
-    foydalanuvchi = null;
-    isAdmin = false;
-    location.reload();
-}
-
-// Competition Logic
-function renderCompAuthPage() {
-    const noComp = document.getElementById('noCompBox');
-    const joinComp = document.getElementById('joinCompBox');
-    
-    if (activeCompetition && activeCompetition.isActive) {
-        noComp.style.display = 'none';
-        joinComp.style.display = 'block';
-        
-        const hasJoined = foydalanuvchi.stats.isJoined === true;
-        
-        if (!hasJoined) {
-            joinComp.innerHTML = `
-                <div style="font-size: 5rem; margin-bottom: 2rem;">🎮</div>
-                <h2 style="color: var(--primary); margin-bottom: 1rem; letter-spacing: 2px;">BELLASHUV TASHKIL ETILDI!</h2>
-                <p style="margin-bottom: 2.5rem; color: var(--text-dim); line-height: 1.8;">
-                    Intelektual bellashuvda qatnashish uchun "QATNASHISH" tugmasini bosing. <br>
-                    Ism-familiyangiz admin jadvalida paydo bo'ladi.
-                </p>
-                <button class="btn btn-primary" onclick="joinCompetitionAction()" style="width: 100%; height: 60px; font-size: 1.1rem;">QATNASHISH_</button>
-            `;
+    updateNav() {
+        const nav = document.getElementById('main-nav');
+        const userInfo = document.getElementById('nav-user-info');
+        if (state.activePage === 'page-landing' || state.activePage.includes('login') || state.activePage === 'page-register') {
+            nav.style.display = 'none';
         } else {
-            if (activeCompetition.isStarted) {
-                joinComp.innerHTML = `
-                    <div style="font-size: 5rem; margin-bottom: 2rem; animation: pulseIcon 2s infinite;">🔥</div>
-                    <h2 style="color: var(--primary); letter-spacing: 2px;">BELLASHUV BOSHLANDI!</h2>
-                    <p style="margin-bottom: 2rem; letter-spacing: 1px; color: var(--text-dim);">
-                        Sizga biriktirilgan bilet raqami: <br>
-                        <strong style="color: var(--gold); font-size: 2.5rem; display: block; margin-top: 10px;">${foydalanuvchi.stats.ticketId || '...'}</strong>
-                    </p>
-                    <button class="btn btn-primary" onclick="startCompetition(${foydalanuvchi.stats.ticketId})" style="width: 100%; height: 60px; font-size: 1.1rem; background: var(--gold); color: #000;">IMTIHONNI BOSHLASH_</button>
-                `;
-            } else {
-                joinComp.innerHTML = `
-                    <div style="font-size: 5rem; margin-bottom: 2rem;">🤝</div>
-                    <h2 style="color: var(--secondary); letter-spacing: 2px;">SIZ RO'YXATDASIZ</h2>
-                    <p style="color: var(--text-dim); margin-bottom: 2.5rem; line-height: 1.8;">
-                        Siz muvaffaqiyatli ro'yxatdan o'tdingiz. <br>
-                        Hozirda ustoz biletlarni tarqatmoqda...
-                    </p>
-                    <div class="loader-line"></div>
-                    <p style="font-size: 0.8rem; color: var(--gold); margin-top: 1.5rem; letter-spacing: 3px; font-weight: 800;">TAYYOR TURING...</p>
-                `;
-            }
+            nav.style.display = 'block';
+            userInfo.innerText = state.isAdmin ? "ADMIN: XUJAQULOV" : `${state.user.firstName} ${state.user.lastName}`;
         }
-    } else {
-        noComp.style.display = 'block';
-        joinComp.style.display = 'none';
-    }
-}
+    },
 
-window.joinCompetitionAction = function() {
-    db.ref('users/' + foydalanuvchi.id + '/stats').update({ isJoined: true, lastSeen: new Date().toLocaleString() }).then(() => {
-        alert("Siz muvaffaqiyatli qo'shildingiz!");
-        renderCompAuthPage();
-    });
-}
+    // --- Authentication ---
+    register() {
+        const first = document.getElementById('reg-firstname').value.trim();
+        const last = document.getElementById('reg-lastname').value.trim();
+        if (!first || !last) return alert("Iltimos, hamma maydonlarni to'ldiring!");
 
-// Sidebar Accordion Logic
-window.toggleAccordion = function(id) {
-    const el = document.getElementById(id);
-    const isVisible = el.style.display === 'block';
-    // Close others
-    document.querySelectorAll('.accordion-content').forEach(c => c.style.display = 'none');
-    document.querySelectorAll('.arrow').forEach(a => a.style.transform = 'rotate(0deg)');
-    
-    if (!isVisible) {
-        el.style.display = 'block';
-        el.previousElementSibling.querySelector('.arrow').style.transform = 'rotate(180deg)';
-    }
-}
-
-// Calculator Logic
-window.updateCalcUI = function() {
-    const type = document.getElementById('calcType').value;
-    const kInput = document.getElementById('calcK');
-    kInput.style.display = (type === 'Pn') ? 'none' : 'block';
-}
-
-window.calculateFormula = function() {
-    const type = document.getElementById('calcType').value;
-    const n = parseInt(document.getElementById('calcN').value);
-    const k = parseInt(document.getElementById('calcK').value);
-    const resEl = document.getElementById('calcResult');
-
-    if (isNaN(n) || n < 0) return resEl.innerText = "Noto'g'ri son!";
-
-    const fact = (num) => (num <= 1) ? 1 : num * fact(num - 1);
-
-    if (type === 'Pn') {
-        if (n > 170) return resEl.innerText = "Juda katta!";
-        resEl.innerText = fact(n).toLocaleString();
-    } else if (type === 'Cnk') {
-        if (isNaN(k) || k < 0 || k > n) return resEl.innerText = "k xato!";
-        const res = fact(n) / (fact(k) * fact(n - k));
-        resEl.innerText = Math.round(res).toLocaleString();
-    } else if (type === 'Ank') {
-        if (isNaN(k) || k < 0 || k > n) return resEl.innerText = "k xato!";
-        const res = fact(n) / fact(n - k);
-        resEl.innerText = Math.round(res).toLocaleString();
-    }
-}
-
-function startCompetition(id) {
-    if(!id || id === 'BIRIKTIRILMAGAN') return alert("Sizga bilet biriktirilmagan!");
-    joriyTestTuri = 'competition';
-    
-    // Sidebar Updates
-    document.getElementById('compStudentName').innerText = `${foydalanuvchi.firstName} ${foydalanuvchi.lastName}`.toUpperCase();
-    document.getElementById('sideCorrect').innerText = foydalanuvchi.stats.correct || 0;
-    document.getElementById('sideIncorrect').innerText = foydalanuvchi.stats.incorrect || 0;
-    
-    document.getElementById('compTicketDisplay').innerText = `BILET #${id}`;
-    
-    const container = document.getElementById('compTestContent');
-    const questions = defaultBiletlar[id];
-    
-    // Initialize session answers if not exists
-    if (!foydalanuvchi.stats.answers) foydalanuvchi.stats.answers = {};
-    
-    let html = "";
-    questions.forEach((q, i) => {
-        const userAns = foydalanuvchi.stats.answers[i];
-        const isSolved = userAns !== undefined;
-        const isCorrect = isSolved && userAns === q.c;
+        const username = (first + "_" + last).toLowerCase().replace(/\s+/g, '') + "_" + Math.floor(1000 + Math.random() * 9000);
         
-        let statusClass = "pending";
-        let statusIcon = "⏳";
-        if (isSolved) {
-            statusClass = isCorrect ? "solved" : "failed";
-            statusIcon = isCorrect ? "✅" : "❌";
-        }
+        db.ref('users/' + username).set({
+            firstName: first,
+            lastName: last,
+            username: username,
+            stats: { correct: 0, incorrect: 0, score: 0, isFinished: false }
+        }).then(() => {
+            alert(`Muvaffaqiyatli ro'yxatdan o'tdingiz!\nSizning loginiz: ${username}\nUni saqlab qoling!`);
+            document.getElementById('login-username').value = username;
+            this.showPage('page-student-login');
+        });
+    },
 
-        let opts = "";
-        q.a.forEach(opt => {
-            const checked = userAns === opt ? "checked" : "";
-            const disabled = isSolved ? "disabled" : "";
-            opts += `<label class="option-label ${isSolved ? 'locked' : ''}"><input type="radio" name="cq${i}" value="${opt}" ${checked} ${disabled} onchange="answerCompQuestion(${i}, this.value)"> ${opt}</label>`;
+    studentLogin() {
+        const user = document.getElementById('login-username').value.trim();
+        db.ref('users/' + user).once('value', (snap) => {
+            const data = snap.val();
+            if (data) {
+                state.user = data;
+                state.isAdmin = false;
+                localStorage.setItem('academy_session', JSON.stringify(data));
+                localStorage.setItem('academy_admin', 'false');
+                this.showPage('page-student-dashboard');
+            } else alert("Bunday foydalanuvchi topilmadi!");
+        });
+    },
+
+    adminLogin() {
+        const u = document.getElementById('admin-user').value;
+        const p = document.getElementById('admin-pass').value;
+        if (u === 'xujaqulov01' && p === 'admin777') {
+            state.isAdmin = true;
+            state.user = { firstName: "Admin", lastName: "Xujaqulov" };
+            localStorage.setItem('academy_admin', 'true');
+            localStorage.setItem('academy_session', JSON.stringify(state.user));
+            this.showPage('page-admin-dashboard');
+        } else alert("Login yoki parol xato!");
+    },
+
+    logout() {
+        localStorage.clear();
+        location.reload();
+    },
+
+    // --- Admin Functions ---
+    switchAdminTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-tab-' + tab).classList.add('active');
+        document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+        
+        if (tab === 'results') this.renderResultsTable();
+    },
+
+    openModal(id) { document.getElementById(id).style.display = 'flex'; },
+    closeModal(id) { document.getElementById(id).style.display = 'none'; },
+
+    saveVideo() {
+        const title = document.getElementById('vid-title').value;
+        const vidId = document.getElementById('vid-id').value;
+        if (!title || !vidId) return alert("Ma'lumotlarni to'ldiring!");
+
+        const id = Date.now();
+        // Generate 10 mock questions for each video
+        const questions = Array.from({length: 10}, (_, i) => ({
+            id: i + 1,
+            q: `${title} mavzusi bo'yicha ${i+1}-savol?`,
+            a: ["To'g'ri javob", "Xato variant 1", "Xato variant 2", "Xato variant 3"],
+            c: "To'g'ri javob"
+        }));
+
+        db.ref('videos/' + id).set({ id, title, vidId, questions }).then(() => {
+            alert("Dars qo'shildi!");
+            this.closeModal('modal-video');
+        });
+    },
+
+    listenToGlobalData() {
+        db.ref('videos').on('value', snap => {
+            const val = snap.val();
+            if (!val && state.isAdmin) {
+                // Agar videolar bo'lmasa va admin bo'lsa, default darslarni yuklaymiz
+                const seedData = {};
+                defaultData.forEach(v => seedData[v.id] = v);
+                db.ref('videos').set(seedData);
+            }
+            state.videos = val ? Object.values(val) : (state.isAdmin ? defaultData : []);
+            if (state.activePage === 'page-student-dashboard') this.renderStudentDashboard();
+            if (state.activePage === 'page-admin-dashboard') this.renderAdminVideoList();
         });
 
-        html += `
-            <div class="q-card-premium ${statusClass}" id="q_card_${i}">
-                <div class="q-header">
-                    <span class="q-num">SAVOL #${i+1}</span>
-                    <span class="q-status-icon" id="q_icon_${i}">${statusIcon}</span>
+        db.ref('competition').on('value', snap => {
+            state.comp = snap.val() || { isStarted: false };
+            this.handleCompetitionState();
+        });
+    },
+
+    renderAdminVideoList() {
+        const list = document.getElementById('admin-video-list');
+        list.innerHTML = state.videos.map(v => `
+            <div class="admin-item-card">
+                <div>
+                    <strong>${v.title}</strong>
+                    <p style="font-size: 0.8rem; color: var(--text-dim)">ID: ${v.vidId} | Savollar: 10 ta</p>
                 </div>
-                <p class="q-text">${q.q}</p>
-                <div class="test-options">
-                    ${opts}
-                </div>
-                <div id="status_msg_${i}" style="font-size: 0.8rem; font-weight: 700; color: ${isCorrect ? '#2ecc71' : 'var(--accent)'}; margin-top: 0.5rem;">
-                    ${isSolved ? (isCorrect ? "TO'G'RI JAVOB! ✅" : `XATO! TO'G'RI JAVOB: ${q.c} ❌`) : ""}
-                </div>
+                <button class="btn btn-outline" style="padding: 5px 15px; font-size: 0.7rem;">Tahrirlash</button>
+            </div>
+        `).join('');
+    },
+
+    // --- Competition Logic ---
+    toggleCompetition(start) {
+        if (start) {
+            const startTime = Date.now();
+            db.ref('competition').set({
+                isStarted: true,
+                startTime: startTime,
+                duration: 30 * 60 * 1000
+            });
+        } else {
+            db.ref('competition').update({ isStarted: false });
+        }
+    },
+
+    handleCompetitionState() {
+        const statusBox = document.getElementById('comp-status-box');
+        const statusText = document.getElementById('comp-status-text');
+        
+        if (state.comp.isStarted) {
+            statusBox.classList.add('active');
+            statusText.innerText = "BELLASHUV BOSHLANDI!";
+            this.startGlobalTimer();
+            
+            if (state.activePage === 'page-student-dashboard' && !state.user.stats.isFinished) {
+                if (confirm("Bellashuv boshlandi! Qatnashasizmi?")) this.prepareCompetitionTest();
+            }
+        } else {
+            statusBox.classList.remove('active');
+            statusText.innerText = "Bellashuv kutilmoqda...";
+            this.stopGlobalTimer();
+        }
+
+        // Admin Buttons
+        if (state.isAdmin) {
+            document.getElementById('btn-start-comp').style.display = state.comp.isStarted ? 'none' : 'block';
+            document.getElementById('btn-stop-comp').style.display = state.comp.isStarted ? 'block' : 'none';
+        }
+    },
+
+    startGlobalTimer() {
+        if (state.timerInterval) clearInterval(state.timerInterval);
+        state.timerInterval = setInterval(() => {
+            const now = Date.now();
+            const elapsed = now - state.comp.startTime;
+            const remaining = state.comp.duration - elapsed;
+
+            if (remaining <= 0) {
+                this.finishCompetition();
+                return;
+            }
+
+            const m = Math.floor(remaining / 60000);
+            const s = Math.floor((remaining % 60000) / 1000);
+            const timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            
+            document.getElementById('admin-timer').innerText = timeStr;
+            document.getElementById('student-timer').innerText = timeStr;
+        }, 1000);
+    },
+
+    stopGlobalTimer() {
+        clearInterval(state.timerInterval);
+        document.getElementById('admin-timer').innerText = "30:00";
+    },
+
+    prepareCompetitionTest() {
+        // Collect all questions from all videos
+        let allQs = [];
+        state.videos.forEach(v => allQs = [...allQs, ...v.questions]);
+        
+        // Pick 20 random questions
+        if (allQs.length < 20) {
+            // Duplicate if not enough
+            while(allQs.length < 20) allQs = [...allQs, ...allQs];
+        }
+        
+        state.currentQuestions = allQs.sort(() => Math.random() - 0.5).slice(0, 20);
+        state.currentQuestionIdx = 0;
+        state.userAnswers = [];
+        
+        this.showPage('page-competition');
+        this.renderQuestion();
+    },
+
+    renderQuestion() {
+        const q = state.currentQuestions[state.currentQuestionIdx];
+        const container = document.getElementById('test-container');
+        document.getElementById('test-progress').innerText = `Savol: ${state.currentQuestionIdx + 1} / 20`;
+
+        const options = [...q.a].sort(() => Math.random() - 0.5);
+
+        container.innerHTML = `
+            <div class="question-text">${q.q}</div>
+            <div class="options-grid">
+                ${options.map(opt => `<button class="option-btn" onclick="app.answerQuestion('${opt.replace(/'/g, "\\'")}')">${opt}</button>`).join('')}
             </div>
         `;
-    });
-    
-    container.innerHTML = html;
-    showPage('competitionTestPage');
-}
+    },
 
-window.answerCompQuestion = function(qIdx, val) {
-    const ticketId = foydalanuvchi.stats.ticketId;
-    const questions = defaultBiletlar[ticketId];
-    const q = questions[qIdx];
-    const isCorrect = val === q.c;
-    
-    // Immediate UI Feedback
-    const card = document.getElementById(`q_card_${qIdx}`);
-    const icon = document.getElementById(`q_icon_${qIdx}`);
-    const msg = document.getElementById(`status_msg_${qIdx}`);
-    
-    card.classList.remove('pending');
-    card.classList.add(isCorrect ? 'solved' : 'failed');
-    icon.innerText = isCorrect ? "✅" : "❌";
-    msg.innerText = isCorrect ? "TO'G'RI JAVOB! ✅" : `XATO! TO'G'RI JAVOB: ${q.c} ❌`;
-    msg.style.color = isCorrect ? "#2ecc71" : "var(--accent)";
-    
-    // Disable inputs
-    document.querySelectorAll(`input[name="cq${qIdx}"]`).forEach(inp => {
-        inp.disabled = true;
-        inp.parentElement.classList.add('locked');
-    });
-
-    // Update Firebase and Local Session
-    const answers = foydalanuvchi.stats.answers || {};
-    answers[qIdx] = val;
-    
-    const newCorrect = (foydalanuvchi.stats.correct || 0) + (isCorrect ? 1 : 0);
-    const newIncorrect = (foydalanuvchi.stats.incorrect || 0) + (isCorrect ? 0 : 1);
-
-    document.getElementById('sideCorrect').innerText = newCorrect;
-    document.getElementById('sideIncorrect').innerText = newIncorrect;
-
-    db.ref('users/' + foydalanuvchi.id + '/stats').update({
-        correct: newCorrect,
-        incorrect: newIncorrect,
-        answers: answers,
-        lastSeen: new Date().toLocaleString()
-    });
-}
-
-// Admin Logic
-window.startNewCompetitionAction = function() {
-    if (confirm("Kodsiz yangi bellashuv tashkil qilinsinmi?")) {
-        db.ref('competition').set({ isActive: true, isStarted: false }).then(() => {
-            alert("Bellashuv yaratildi! Endi o'quvchilar qo'shilishini kuting.");
-            toggleAdminView('leaderboard');
+    answerQuestion(ans) {
+        const q = state.currentQuestions[state.currentQuestionIdx];
+        const isCorrect = ans === q.c;
+        
+        state.userAnswers.push({ qId: q.id, isCorrect });
+        
+        // Update live stats in DB
+        const correct = state.userAnswers.filter(a => a.isCorrect).length;
+        const incorrect = state.userAnswers.length - correct;
+        
+        db.ref('users/' + state.user.username + '/stats').update({
+            correct, incorrect, score: correct * 5,
+            lastUpdate: Date.now()
         });
-    }
-}
 
-window.startExamAction = function() {
-    const startTime = Date.now();
-    db.ref('competition').update({ isStarted: true, startTime: startTime, duration: 30 * 60 * 1000 }).then(() => {
-        alert("Bellashuv BOSHLANDI!");
-    });
-}
-
-window.stopCompetition = function() {
-    if (confirm("Bellashuvni to'xtatmoqchimisiz?")) {
-        db.ref('competition').set({ isActive: false, isStarted: false }).then(() => {
-            alert("Bellashuv to'xtatildi!");
-            toggleAdminView('modules');
-        });
-    }
-}
-
-function startCountdown() {
-    if (timerInterval) clearInterval(timerInterval);
-    const updateTimerUI = () => {
-        const now = Date.now();
-        const start = activeCompetition.startTime;
-        const diff = (start + (activeCompetition.duration || 1800000)) - now;
-        if (diff <= 0) {
-            if (document.getElementById('studentTimer')) document.getElementById('studentTimer').innerText = "00:00";
-            if (document.getElementById('adminTimer')) document.getElementById('adminTimer').innerText = "00:00";
-            clearInterval(timerInterval);
-            if (joriyTestTuri === 'competition') showPage('dashboardPage');
-            return;
+        state.currentQuestionIdx++;
+        if (state.currentQuestionIdx < 20) {
+            this.renderQuestion();
+        } else {
+            this.finishCompetition();
         }
-        const m = Math.floor(diff / 60000);
-        const s = Math.floor((diff % 60000) / 1000);
-        const timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        if (document.getElementById('studentTimer')) document.getElementById('studentTimer').innerText = timeStr;
-        const adminT = document.getElementById('adminTimer');
-        if (adminT) { adminT.innerText = timeStr; adminT.style.display = 'block'; }
-    };
-    updateTimerUI();
-    timerInterval = setInterval(updateTimerUI, 1000);
-}
+    },
 
-function stopCountdown() { if (timerInterval) clearInterval(timerInterval); const adminT = document.getElementById('adminTimer'); if (adminT) adminT.style.display = 'none'; }
+    finishCompetition() {
+        this.stopGlobalTimer();
+        db.ref('users/' + state.user.username + '/stats').update({ isFinished: true });
+        
+        // Show results
+        const stats = state.userAnswers;
+        const correct = stats.filter(a => a.isCorrect).length;
+        document.getElementById('user-final-stats').innerHTML = `
+            <div class="stat-item"><span>To'g'ri:</span> <strong>${correct}</strong></div>
+            <div class="stat-item"><span>Noto'g'ri:</span> <strong>${stats.length - correct}</strong></div>
+            <div class="stat-item"><span>Umumiy ball:</span> <strong>${correct * 5}</strong></div>
+        `;
 
-function adminLogin() {
-    const u = document.getElementById('adminUser').value;
-    const p = document.getElementById('adminPass').value;
-    if (u === 'xujaqulov01' && p === 'admin777') {
-        isAdmin = true;
-        localStorage.setItem('vd_admin', 'true');
-        showPage('adminDashboardPage');
-    } else alert("Xato!");
-}
-
-window.toggleAdminView = function(view) {
-    document.querySelectorAll('.admin-view-section').forEach(s => s.style.display = 'none');
-    if (view === 'modules') document.getElementById('adminModulesList').style.display = 'block';
-    if (view === 'users') { document.getElementById('adminUsersList').style.display = 'block'; renderAdminUserStats(); }
-    if (view === 'leaderboard') { document.getElementById('adminLeaderboard').style.display = 'block'; listenLeaderboard(); }
-}
-
-function renderAdminDashboard() {
-    const list = document.getElementById('adminModulesList');
-    let html = '<table class="admin-table"><thead><tr><th>MODUL NOMI</th><th>AMALLAR</th></tr></thead><tbody>';
-    defaultDarslar.forEach((d) => {
-        html += `<tr><td style="font-weight: 600;">${d.t}</td><td style="display: flex; gap: 0.5rem;"><button class="btn btn-outline" style="font-size: 0.7rem;" onclick="openTestManager(${d.id})">TESTLAR</button></td></tr>`;
-    });
-    list.innerHTML = html + '</tbody></table>';
-}
-
-function renderAdminUserStats() {
-    db.ref('users').on('value', (snapshot) => {
-        const users = snapshot.val() || {};
-        const body = document.getElementById('userStatsBody');
-        body.innerHTML = "";
-        Object.entries(users).forEach(([id, u]) => {
-            const tr = document.createElement('tr');
-            const progress = u.stats.progress || 0;
-            const currentLesson = defaultDarslar[progress] ? defaultDarslar[progress].t : "TUGATILDI";
-            tr.innerHTML = `<td><strong>${u.firstName} ${u.lastName}</strong></td><td style="color: var(--secondary);">${currentLesson}</td><td>T: ${u.stats.correct} | X: ${u.stats.incorrect}</td><td style="text-align: center;"><button class="btn btn-outline" style="border-color: var(--accent); color: var(--accent); font-size: 0.7rem;" onclick="deleteUser('${id}')">O'CHIRISH</button></td>`;
-            body.appendChild(tr);
+        // Check for Rank (Top 3 get certificate)
+        db.ref('users').once('value', snap => {
+            const users = Object.values(snap.val() || {});
+            users.sort((a, b) => b.stats.score - a.stats.score);
+            const myRank = users.findIndex(u => u.username === state.user.username) + 1;
+            
+            if (myRank <= 3) {
+                document.getElementById('certificate-box').style.display = 'block';
+                document.getElementById('cert-name').innerText = `${state.user.firstName} ${state.user.lastName}`.toUpperCase();
+                document.getElementById('cert-rank-val').innerText = myRank;
+                document.getElementById('cert-date').innerText = new Date().toLocaleDateString();
+            }
+            
+            this.showPage('page-final-results');
         });
-    });
-}
+    },
 
-window.deleteUser = function(id) { if(confirm("Foydalanuvchini o'chirmoqchimisiz?")) { db.ref('users/' + id).remove().then(() => alert("Foydalanuvchi o'chirildi!")); } }
+    // --- Student Dashboard ---
+    renderStudentDashboard() {
+        const grid = document.getElementById('video-grid');
+        grid.innerHTML = state.videos.map(v => `
+            <div class="video-card">
+                <div class="video-thumbnail">
+                    <iframe width="100%" height="100%" src="https://www.youtube.com/embed/${v.vidId}" frameborder="0" allowfullscreen></iframe>
+                </div>
+                <div class="video-card-content">
+                    <h3>${v.title}</h3>
+                    <button class="btn btn-primary w-100" onclick="alert('Ushbu dars bo\\'yicha testlar bellashuv vaqtida ochiladi!')">DARSNI KO'RISH</button>
+                </div>
+            </div>
+        `).join('');
+    },
 
-function listenLeaderboard() {
-    db.ref('users').on('value', (snapshot) => {
-        const users = snapshot.val() || {};
-        const body = document.getElementById('leaderboardBody');
-        body.innerHTML = "";
-        const joinedUsers = Object.entries(users).filter(([id, u]) => u.stats.isJoined === true);
-        joinedUsers.sort((a,b) => (b[1].stats.correct||0) - (a[1].stats.correct||0));
-        joinedUsers.forEach(([id, u], i) => {
-            const ticket = u.stats.ticketId ? `<span style="color: var(--gold); font-weight: 800;">BILET #${u.stats.ticketId}</span>` : '<span style="color: #666;">BIRIKTIRILMAGAN</span>';
-            body.innerHTML += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 1.5rem; text-align: center;">${i+1}</td><td style="padding: 1.5rem; font-weight: 700;">${u.firstName} ${u.lastName}</td><td style="padding: 1.5rem; text-align: center;">${ticket}</td><td style="padding: 1.5rem; text-align: center; color: #2ecc71;">${u.stats.correct || 0}</td><td style="padding: 1.5rem; text-align: center; color: var(--accent);">${u.stats.incorrect || 0}</td><td style="padding: 1.5rem; text-align: center; font-size: 0.8rem; color: #888;">${u.stats.lastSeen}</td></tr>`;
+    // --- Results & Table ---
+    renderResultsTable() {
+        db.ref('users').on('value', snap => {
+            const users = Object.values(snap.val() || {});
+            users.sort((a, b) => (b.stats.score || 0) - (a.stats.score || 0));
+            
+            const body = document.getElementById('results-body');
+            body.innerHTML = users.map((u, i) => `
+                <tr>
+                    <td><strong>${i + 1}</strong></td>
+                    <td>${u.firstName} ${u.lastName}</td>
+                    <td>${u.username}</td>
+                    <td style="color: var(--success)">${u.stats.correct || 0}</td>
+                    <td style="color: var(--danger)">${u.stats.incorrect || 0}</td>
+                    <td><span class="badge-score">${u.stats.score || 0}</span></td>
+                    <td>${u.stats.isFinished ? '✅ Tugatdi' : '⏳ Ishlamoqda'}</td>
+                </tr>
+            `).join('');
         });
-    });
-}
+    },
 
-window.distributeTickets = function() {
-    db.ref('users').once('value', (snapshot) => {
-        const users = snapshot.val();
-        if (!users) return;
-        const joinedUsers = Object.keys(users).filter(id => users[id].stats.isJoined === true);
-        if (joinedUsers.length === 0) return alert("Hali hech kim qo'shilmadi!");
-        const biletIds = Object.keys(defaultBiletlar);
-        const updates = {};
-        joinedUsers.forEach(id => {
-            const rId = biletIds[Math.floor(Math.random() * biletIds.length)];
-            updates[`users/${id}/stats/ticketId`] = rId;
+    exportExcel() {
+        db.ref('users').once('value', snap => {
+            const users = Object.values(snap.val() || {});
+            users.sort((a, b) => (b.stats.score || 0) - (a.stats.score || 0));
+            
+            const data = users.map((u, i) => ({
+                "O'rin": i + 1,
+                "Ism": u.firstName,
+                "Familiya": u.lastName,
+                "Username": u.username,
+                "To'g'ri": u.stats.correct || 0,
+                "Noto'g'ri": u.stats.incorrect || 0,
+                "Ball": u.stats.score || 0
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Natijalar");
+            XLSX.writeFile(wb, "Bellashuv_Natijalari.xlsx");
         });
-        db.ref().update(updates).then(() => { alert("Biletlar tarqatildi!"); });
-    });
-}
+    },
 
-window.openBiletManager = function() { document.getElementById('biletManagerModal').style.display = 'flex'; renderAdminBilets(); }
-window.closeBiletManager = function() { document.getElementById('biletManagerModal').style.display = 'none'; }
-function renderAdminBilets() {
-    const container = document.getElementById('biletsList');
-    container.innerHTML = "";
-    Object.entries(defaultBiletlar).forEach(([id, qs]) => {
-        const card = document.createElement('div');
-        card.className = "card"; card.style.background = "rgba(0,0,0,0.3)";
-        let h = ""; qs.forEach((q, i) => h += `<div style="padding:0.5rem;"><input type="text" class="input-field b-q-text" data-bid="${id}" data-qidx="${i}" value="${q.q}" style="width:100%;"></div>`);
-        card.innerHTML = `<h4>BILET #${id}</h4>${h}`; container.appendChild(card);
-    });
-}
-window.saveBilets = function() {
-    const newB = {};
-    Object.keys(defaultBiletlar).forEach(bid => {
-        newB[bid] = [];
-        document.querySelectorAll(`.b-q-text[data-bid="${bid}"]`).forEach((el, i) => { newB[bid].push({ q: el.value, a: defaultBiletlar[bid][i].a, c: defaultBiletlar[bid][i].c }); });
-    });
-    Object.assign(defaultBiletlar, newB); localStorage.setItem('cyber_bilets', JSON.stringify(defaultBiletlar)); alert("Saqlandi!"); closeBiletManager();
-}
-window.exportToExcel = function() { const table = document.getElementById("leaderboardTableMain"); const ws = XLSX.utils.table_to_sheet(table); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Natijalar"); XLSX.writeFile(wb, "Natijalar.xlsx"); }
-
-function renderProfile() {
-    document.getElementById('profileName').innerText = `${foydalanuvchi.firstName} ${foydalanuvchi.lastName}`;
-    document.getElementById('profileRole').innerText = foydalanuvchi.stats.ticketId ? `BILET #${foydalanuvchi.stats.ticketId}` : "TALABA";
-    document.getElementById('profileProgress').innerText = foydalanuvchi.stats.progress;
-    document.getElementById('profileCorrect').innerText = foydalanuvchi.stats.correct;
-}
-
-function renderDashboard() {
-    const grid = document.getElementById('lessonGrid');
-    grid.innerHTML = "";
-    defaultDarslar.forEach((d, i) => {
-        const isLocked = i > (foydalanuvchi.stats.progress || 0);
-        const card = document.createElement('div');
-        card.className = `lesson-card ${isLocked ? 'locked' : ''}`;
-        let ytId = "";
-        if (d.v.includes('embed/')) ytId = d.v.split('embed/')[1].split('?')[0];
-        else if (d.v.includes('v=')) ytId = d.v.split('v=')[1].split('&')[0];
-        else if (d.v.includes('youtu.be/')) ytId = d.v.split('youtu.be/')[1].split('?')[0];
-        const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg` : 'assets/img/video-placeholder.jpg';
-        card.innerHTML = `<div class="lesson-thumb" style="background-image: url('${thumbUrl}')">${isLocked ? '<div class="lock-overlay">🔒</div>' : ''}</div><div class="lesson-info"><h3>${d.t}</h3><p class="status">${isLocked ? 'Qulflangan' : '✅ Ochiq'}</p></div>`;
-        if (!isLocked) card.onclick = () => { 
-            joriyDars = d; 
-            showPage('lessonPage'); 
-            document.getElementById('lessonTitle').innerText = d.t; 
-            document.getElementById('lessonVideo').src = d.v; 
-            document.getElementById('lessonExamBtn').style.display = 'block';
-        };
-        grid.appendChild(card);
-    });
-}
-
-window.startLessonTest = function() {
-    joriyTestTuri = 'lesson';
-    const container = document.getElementById('testContent');
-    const questions = defaultTestlar[joriyDars.id];
-    let html = "";
-    questions.forEach((q, i) => {
-        let opts = "";
-        q.a.forEach(opt => opts += `<label class="option-label"><input type="radio" name="q${i}" value="${opt}"> ${opt}</label>`);
-        html += `<div class="card" style="margin-bottom: 1.5rem;"><p>${i+1}. ${q.q}</p><div class="test-options">${opts}</div></div>`;
-    });
-    container.innerHTML = html;
-    showPage('testPage');
-}
-
-window.submitTest = function() {
-    const questions = defaultTestlar[joriyDars.id];
-    let correct = 0;
-    questions.forEach((q, i) => {
-        const sel = document.querySelector(`input[name="q${i}"]:checked`);
-        if (sel && sel.value === q.c) correct++;
-    });
-    const percent = Math.round((correct/questions.length)*100);
-    if (percent >= 60) {
-        const currentIdx = defaultDarslar.findIndex(d => d.id === joriyDars.id);
-        db.ref('users/' + foydalanuvchi.id + '/stats').update({ progress: Math.max(foydalanuvchi.stats.progress || 0, currentIdx + 1) });
+    downloadCertificate() {
+        const cert = document.getElementById('certificate-template');
+        html2canvas(cert).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('l', 'px', [canvas.width, canvas.height]);
+            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+            pdf.save(`${state.user.firstName}_Sertifikat.pdf`);
+        });
     }
-    renderResult(percent);
-}
+};
 
-function renderResult(p) {
-    document.getElementById('resultPercent').innerText = p + "%";
-    document.getElementById('resultMsg').innerText = p >= 60 ? "Muvaffaqiyatli! Keyingi dars ochildi." : "Yana urinib ko'ring (Kamida 60% kerak)";
-    document.getElementById('resultActionBtn').innerText = "DAVOM ETISH";
-    document.getElementById('resultActionBtn').onclick = () => showPage('dashboardPage');
-    showPage('resultPage');
-}
+// Start the App
+window.addEventListener('DOMContentLoaded', () => app.init());
