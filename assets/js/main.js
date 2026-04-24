@@ -17,7 +17,6 @@ const firebaseConfig = {
 };
 
 let db;
-// Robust Mock DB
 const listeners = [];
 const getMockData = () => JSON.parse(localStorage.getItem('vd_mock_db') || '{}');
 const setMockData = (data) => localStorage.setItem('vd_mock_db', JSON.stringify(data));
@@ -43,7 +42,11 @@ if (firebaseConfig.apiKey === "YOUR_API_KEY") {
             on: (event, cb) => {
                 const parts = path.split('/').filter(p => p);
                 listeners.push({ path, cb, partsLength: parts.length });
-                triggerListeners();
+                const data = getMockData();
+                let target = data;
+                for (const p of parts) target = (target && target[p]) ? target[p] : null;
+                const val = (target === null || (typeof target === 'object' && Object.keys(target).length === 0)) ? null : target;
+                cb({ val: () => val });
             },
             once: (event, cb) => {
                 const data = getMockData();
@@ -63,7 +66,7 @@ if (firebaseConfig.apiKey === "YOUR_API_KEY") {
                 }
                 curr[parts[parts.length - 1]] = val;
                 setMockData(data);
-                triggerListeners();
+                setTimeout(triggerListeners, 0); // Async to prevent stack overflow
                 return Promise.resolve();
             },
             update: (val) => {
@@ -76,7 +79,7 @@ if (firebaseConfig.apiKey === "YOUR_API_KEY") {
                 }
                 Object.assign(curr, val);
                 setMockData(data);
-                triggerListeners();
+                setTimeout(triggerListeners, 0);
                 return Promise.resolve();
             },
             remove: () => {
@@ -86,7 +89,7 @@ if (firebaseConfig.apiKey === "YOUR_API_KEY") {
                 for (let i = 0; i < parts.length - 1; i++) curr = curr[parts[i]];
                 if (curr) delete curr[parts[parts.length - 1]];
                 setMockData(data);
-                triggerListeners();
+                setTimeout(triggerListeners, 0);
                 return Promise.resolve();
             }
         })
@@ -107,7 +110,6 @@ const state = {
 
 window.app = {
     init() {
-        // First, ensure default data is in the DB if it's completely empty
         const currentDB = getMockData();
         if (!currentDB.videos || Object.keys(currentDB.videos).length === 0) {
             const initial = {};
@@ -161,13 +163,13 @@ window.app = {
     register() {
         const f = document.getElementById('reg-firstname').value.trim();
         const l = document.getElementById('reg-lastname').value.trim();
-        if (!f || !l) return alert("Ism va familiyani kiriting!");
+        if (!f || !l) return alert("To'ldiring!");
         const u = (f + "_" + l).toLowerCase().replace(/\s+/g, '') + "_" + Math.floor(1000 + Math.random() * 8999);
         db.ref('users/' + u).set({
             firstName: f, lastName: l, username: u,
             stats: { progress: 0, correct: 0, incorrect: 0, score: 0 }
         }).then(() => {
-            alert("Sizning login: " + u);
+            alert("Login: " + u);
             document.getElementById('login-username').value = u;
             this.showPage('page-student-login');
         });
@@ -175,7 +177,7 @@ window.app = {
 
     studentLogin() {
         const u = document.getElementById('login-username').value.trim();
-        if (!u) return alert("Loginni kiriting!");
+        if (!u) return alert("Login!");
         db.ref('users/' + u).once('value', snap => {
             const data = snap.val();
             if (data) {
@@ -185,7 +187,7 @@ window.app = {
                 localStorage.setItem('vd_is_admin', 'false');
                 this.syncUser();
                 this.showPage('page-student-dashboard');
-            } else alert("Xato! Login topilmadi.");
+            } else alert("Xato!");
         });
     },
 
@@ -235,7 +237,6 @@ window.app = {
         const grid = document.getElementById('video-grid');
         if (!grid) return;
         const userProgress = state.user?.stats?.progress || 0;
-        
         grid.innerHTML = state.videos.map((v, i) => {
             const isLocked = i > userProgress;
             const isCompleted = i < userProgress;
@@ -257,7 +258,7 @@ window.app = {
         if (userProgress >= state.videos.length && state.videos.length > 0) {
             const certBox = document.createElement('div');
             certBox.className = 'cert-promo-card';
-            certBox.innerHTML = `<h3>TABRIKLAYMIZ! 🎓</h3><p>Kursni muvaffaqiyatli tugatdingiz.</p><button class="btn btn-primary" onclick="app.showCertificate()">SERTIFIKATNI OLISH</button>`;
+            certBox.innerHTML = `<h3>TABRIKLAYMIZ! 🎓</h3><p>Siz kursni tugatdingiz.</p><button class="btn btn-primary" onclick="app.showCertificate()">SERTIFIKATNI OLISH</button>`;
             grid.prepend(certBox);
         }
     },
@@ -270,11 +271,11 @@ window.app = {
                 <div class="vid-preview"><img src="https://img.youtube.com/vi/${v.vidId}/mqdefault.jpg"></div>
                 <div class="vid-details">
                     <h4>${v.title}</h4>
-                    <p>ID: ${v.vidId}</p>
+                    <p class="vid-id-tag">ID: ${v.vidId}</p>
                     <div class="vid-actions">
-                        <button class="btn-s btn-edit" onclick="app.openEditVideo(${v.id})">Tahrirlash</button>
-                        <button class="btn-s btn-test" onclick="app.openTestEditor(${v.id})">Testlar</button>
-                        <button class="btn-s btn-delete" onclick="app.deleteVideo(${v.id})">O'chirish</button>
+                        <button class="btn-s btn-edit-premium" onclick="app.openEditVideo(${v.id})">Tahrirlash</button>
+                        <button class="btn-s btn-test-premium" onclick="app.openTestEditor(${v.id})">Testlarni boshqarish</button>
+                        <button class="btn-s btn-delete-premium" onclick="app.deleteVideo(${v.id})">O'chirish</button>
                     </div>
                 </div>
             </div>
@@ -373,7 +374,7 @@ window.app = {
         document.getElementById('lesson-title').innerText = state.currentLesson.title;
         document.getElementById('lesson-iframe').src = `https://www.youtube.com/embed/${state.currentLesson.vidId}?rel=0`;
         this.showPage('page-lesson-view');
-        this.closeModal('lesson-test-overlay');
+        this.closeLessonTest();
     },
 
     startLessonTest() {
@@ -404,7 +405,7 @@ window.app = {
             const currentIdx = state.videos.findIndex(v => v.id === state.currentLesson.id);
             const nextProgress = Math.max(state.user.stats.progress, currentIdx + 1);
             db.ref('users/' + state.user.username + '/stats').update({ progress: nextProgress }).then(() => { 
-                alert("Muvaffaqiyatli!"); this.closeModal('lesson-test-overlay'); this.showPage('page-student-dashboard'); 
+                alert("Muvaffaqiyatli!"); this.closeLessonTest(); this.showPage('page-student-dashboard'); 
             });
         } else alert(`Natija: ${percent}%. O'tish: 60%.`);
     },
@@ -435,8 +436,7 @@ window.app = {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
         if (event && event.target && event.target.classList) event.target.classList.add('active');
-        const target = document.getElementById('tab-' + tab);
-        if (target) target.classList.add('active');
+        document.getElementById('tab-' + tab).classList.add('active');
         if (tab === 'results') this.renderResults();
     }
 };
