@@ -18,11 +18,9 @@ const firebaseConfig = {
 
 let db;
 if (firebaseConfig.apiKey === "YOUR_API_KEY") {
-    // Improved Mock DB for Local Testing
     const getMockData = () => {
         let data = JSON.parse(localStorage.getItem('cyber_mock_db') || '{}');
         if (Object.keys(data).length === 0) {
-            // Initial Sample Data
             data = {
                 users: {
                     "ali_valiyev": { firstName: "Ali", lastName: "Valiyev", pin: "1111", stats: { correct: 15, incorrect: 2, progress: 5, ticketId: 1, lastSeen: "24.04.2026, 15:30" } },
@@ -37,60 +35,54 @@ if (firebaseConfig.apiKey === "YOUR_API_KEY") {
     };
     const saveMockData = (data) => localStorage.setItem('cyber_mock_db', JSON.stringify(data));
 
+    const setDeepValue = (obj, path, value) => {
+        const parts = path.split('/').filter(p => p);
+        let curr = obj;
+        for (let i = 0; i < parts.length - 1; i++) {
+            if (!curr[parts[i]]) curr[parts[i]] = {};
+            curr = curr[parts[i]];
+        }
+        curr[parts[parts.length - 1]] = value;
+    };
+
     db = {
-        ref: (path) => ({
+        ref: (path = "") => ({
             on: (event, callback) => {
                 const data = getMockData();
-                const parts = path.split('/');
+                const parts = path.split('/').filter(p => p);
                 let target = data;
-                for (const p of parts) if (p) target = target[p] || {};
+                for (const p of parts) target = target[p] || {};
                 callback({ val: () => (Object.keys(target).length === 0 ? null : target) });
             },
             set: (val) => {
                 const data = getMockData();
-                const parts = path.split('/');
-                let curr = data;
-                for (let i = 0; i < parts.length - 1; i++) {
-                    if (parts[i]) {
-                        if (!curr[parts[i]]) curr[parts[i]] = {};
-                        curr = curr[parts[i]];
-                    }
-                }
-                curr[parts[parts.length - 1]] = val;
+                setDeepValue(data, path, val);
                 saveMockData(data);
                 return Promise.resolve();
             },
             update: (val) => {
                 const data = getMockData();
-                const parts = path.split('/');
-                let curr = data;
-                for (let i = 0; i < parts.length - 1; i++) {
-                    if (parts[i]) {
-                        if (!curr[parts[i]]) curr[parts[i]] = {};
-                        curr = curr[parts[i]];
-                    }
-                }
-                const key = parts[parts.length - 1];
-                curr[key] = { ...curr[key], ...val };
+                Object.entries(val).forEach(([k, v]) => {
+                    const fullPath = path ? `${path}/${k}` : k;
+                    setDeepValue(data, fullPath, v);
+                });
                 saveMockData(data);
                 return Promise.resolve();
             },
             remove: () => {
                 const data = getMockData();
-                const parts = path.split('/');
+                const parts = path.split('/').filter(p => p);
                 let curr = data;
-                for (let i = 0; i < parts.length - 1; i++) {
-                    if (parts[i]) curr = curr[parts[i]];
-                }
+                for (let i = 0; i < parts.length - 1; i++) curr = curr[parts[i]];
                 delete curr[parts[parts.length - 1]];
                 saveMockData(data);
                 return Promise.resolve();
             },
             once: (event, callback) => {
                 const data = getMockData();
-                const parts = path.split('/');
+                const parts = path.split('/').filter(p => p);
                 let target = data;
-                for (const p of parts) if (p) target = target[p] || {};
+                for (const p of parts) target = target[p] || {};
                 callback({ val: () => (Object.keys(target).length === 0 ? null : target) });
             }
         })
@@ -108,7 +100,6 @@ let joriyTestTuri = 'lesson';
 let activeCompetition = null;
 let timerInterval = null;
 
-// Load persisted bilets if they exist
 const savedBilets = localStorage.getItem('cyber_bilets');
 if (savedBilets) {
     try {
@@ -119,7 +110,6 @@ if (savedBilets) {
 
 function init() {
     setupEventListeners();
-    
     const savedAdmin = localStorage.getItem('vd_admin') === 'true';
     const savedPage = localStorage.getItem('cyber_active_page');
 
@@ -143,28 +133,18 @@ function init() {
         activeCompetition = snapshot.val() || { isActive: false };
         updateCompetitionMenus();
         if (document.getElementById('compAuthPage').classList.contains('active')) renderCompAuthPage();
-        
-        if (activeCompetition && activeCompetition.isStarted && activeCompetition.startTime) {
-            startCountdown();
-        } else {
-            stopCountdown();
-        }
+        if (activeCompetition && activeCompetition.isStarted && activeCompetition.startTime) startCountdown();
+        else stopCountdown();
     });
 }
 
 function updateCompetitionMenus() {
     const isActive = activeCompetition && activeCompetition.isActive;
-    
     const leaderBtn = document.querySelector('button[onclick="toggleAdminView(\'leaderboard\')"]');
     if (leaderBtn) leaderBtn.style.display = isActive ? 'inline-block' : 'none';
-    
-    // Always show the button for students, as requested
     const compNavItem = document.querySelector('.nav-item[data-page="compAuthPage"]');
     if (compNavItem) compNavItem.style.display = 'block';
-    
-    if (!isActive && isAdmin && document.getElementById('adminLeaderboard').style.display === 'block') {
-        toggleAdminView('modules');
-    }
+    if (!isActive && isAdmin && document.getElementById('adminLeaderboard').style.display === 'block') toggleAdminView('modules');
 }
 
 window.addEventListener('DOMContentLoaded', init);
@@ -174,7 +154,6 @@ function setupEventListeners() {
     document.getElementById('registerBtn')?.addEventListener('click', register);
     document.getElementById('adminLoginBtn')?.addEventListener('click', adminLogin);
     document.getElementById('logoutBtn')?.addEventListener('click', logout);
-    
     document.querySelectorAll('[data-page]').forEach(el => {
         el.addEventListener('click', (e) => showPage(e.currentTarget.getAttribute('data-page')));
     });
@@ -235,7 +214,6 @@ function updateUI() {
 
 function showPage(id) {
     if (id === 'adminDashboardPage' && !isAdmin) return showPage('adminLoginPage');
-    
     if (isAdmin && (id === 'dashboardPage' || id === 'compAuthPage')) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById('adminDashboardPage').classList.add('active');
@@ -243,21 +221,15 @@ function showPage(id) {
         if (id === 'compAuthPage') toggleAdminView('leaderboard');
         return;
     }
-
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const target = document.getElementById(id);
     if (target) {
         target.classList.add('active');
         document.getElementById('navbar').style.display = (id === 'loginPage' || id === 'adminLoginPage') ? 'none' : 'flex';
-        
         if (id === 'dashboardPage') renderDashboard();
-        if (id === 'adminDashboardPage') {
-            renderAdminDashboard();
-            toggleAdminView('modules');
-        }
+        if (id === 'adminDashboardPage') { renderAdminDashboard(); toggleAdminView('modules'); }
         if (id === 'compAuthPage') renderCompAuthPage();
         if (id === 'profilePage') renderProfile();
-        
         localStorage.setItem('cyber_active_page', id);
         window.scrollTo(0, 0);
     }
@@ -274,15 +246,12 @@ function logout() {
 }
 
 let isCompVerified = false;
-
 function renderCompAuthPage() {
     const noComp = document.getElementById('noCompBox');
     const joinComp = document.getElementById('joinCompBox');
-    
     if (activeCompetition && activeCompetition.isActive) {
         noComp.style.display = 'none';
         joinComp.style.display = 'block';
-        
         if (!isCompVerified) {
             joinComp.innerHTML = `
                 <div style="font-size: 3rem; margin-bottom: 1.5rem;">🔑</div>
@@ -322,9 +291,7 @@ window.verifyCompCode = function() {
         if (!foydalanuvchi.stats.ticketId) return alert("Sizga hali bilet biriktirilmagan! Admindan so'rang.");
         isCompVerified = true;
         renderCompAuthPage();
-    } else {
-        alert("Noto'g'ri kod!");
-    }
+    } else alert("Noto'g'ri kod!");
 }
 
 function startCompetition(id) {
@@ -337,18 +304,13 @@ function startCompetition(id) {
     questions.forEach((q, i) => {
         let opts = "";
         q.a.forEach(opt => opts += `<label class="option-label"><input type="radio" name="cq${i}" value="${opt}" onchange="answerCompQuestion(${i}, this.value)"> ${opt}</label>`);
-        html += `<div class="card" style="margin-bottom: 1.5rem;">
-            <p style="font-weight: 700; margin-bottom: 1rem;">${i+1}. ${q.q}</p>
-            <div class="test-options">${opts}</div>
-            <div id="status_cq${i}" style="margin-top: 0.5rem; font-size: 0.8rem; font-weight: 700;"></div>
-        </div>`;
+        html += `<div class="card" style="margin-bottom: 1.5rem;"><p style="font-weight: 700; margin-bottom: 1rem;">${i+1}. ${q.q}</p><div class="test-options">${opts}</div><div id="status_cq${i}" style="margin-top: 0.5rem; font-size: 0.8rem; font-weight: 700;"></div></div>`;
     });
     container.innerHTML = html;
     showPage('competitionTestPage');
 }
 
 window.answeredQuestions = {}; 
-
 window.answerCompQuestion = function(qIdx, val) {
     if (window.answeredQuestions[qIdx]) return; 
     const questions = defaultBiletlar[foydalanuvchi.stats.ticketId];
@@ -357,13 +319,8 @@ window.answerCompQuestion = function(qIdx, val) {
     window.answeredQuestions[qIdx] = true;
     document.querySelectorAll(`input[name="cq${qIdx}"]`).forEach(inp => inp.disabled = true);
     const statusEl = document.getElementById(`status_cq${qIdx}`);
-    if (isCorrect) {
-        statusEl.innerText = "TO'G'RI! ✅";
-        statusEl.style.color = "#2ecc71";
-    } else {
-        statusEl.innerText = `XATO! ❌ (To'g'ri javob: ${q.c})`;
-        statusEl.style.color = "#e74c3c";
-    }
+    if (isCorrect) { statusEl.innerText = "TO'G'RI! ✅"; statusEl.style.color = "#2ecc71"; }
+    else { statusEl.innerText = `XATO! ❌ (To'g'ri javob: ${q.c})`; statusEl.style.color = "#e74c3c"; }
     db.ref('users/' + foydalanuvchi.id + '/stats').update({
         correct: (foydalanuvchi.stats.correct || 0) + (isCorrect ? 1 : 0),
         incorrect: (foydalanuvchi.stats.incorrect || 0) + (isCorrect ? 0 : 1),
@@ -413,14 +370,13 @@ function startCountdown() {
         const timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         if (document.getElementById('studentTimer')) document.getElementById('studentTimer').innerText = timeStr;
         const adminT = document.getElementById('adminTimer');
-        const adminMsg = document.getElementById('adminTimerMsg');
-        if (adminT) { adminT.innerText = timeStr; adminT.style.display = 'inline-block'; if (adminMsg) adminMsg.style.display = 'none'; }
+        if (adminT) { adminT.innerText = timeStr; adminT.style.display = 'inline-block'; if (document.getElementById('adminTimerMsg')) document.getElementById('adminTimerMsg').style.display = 'none'; }
     };
     updateTimerUI();
     timerInterval = setInterval(updateTimerUI, 1000);
 }
 
-function stopCountdown() { if (timerInterval) clearInterval(timerInterval); const adminT = document.getElementById('adminTimer'); const adminMsg = document.getElementById('adminTimerMsg'); if (adminT) adminT.style.display = 'none'; if (adminMsg) adminMsg.style.display = 'block'; }
+function stopCountdown() { if (timerInterval) clearInterval(timerInterval); const adminT = document.getElementById('adminTimer'); if (adminT) adminT.style.display = 'none'; if (document.getElementById('adminTimerMsg')) document.getElementById('adminTimerMsg').style.display = 'block'; }
 
 function renderCompSetupButtons() {
     const container = document.querySelector('#compSetupModal div div:last-child');
@@ -475,7 +431,9 @@ function renderAdminUserStats() {
         body.innerHTML = "";
         Object.entries(users).forEach(([id, u]) => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td><strong>${u.firstName} ${u.lastName}</strong></td><td style="color: var(--primary); font-weight: 700;">${u.stats.ticketId || '-'}</td><td>${u.stats.progress || 0}</td><td>T: ${u.stats.correct} | X: ${u.stats.incorrect}</td><td style="text-align: center;"><button class="btn btn-outline" style="border-color: var(--accent); color: var(--accent); font-size: 0.7rem;" onclick="deleteUser('${id}')">O'CHIRISH</button></td>`;
+            const ticketId = u.stats.ticketId || '-';
+            const ticketDisplay = ticketId !== '-' ? `<span class="badge" style="background: var(--gold); color: #000; font-weight: 800; padding: 2px 8px; border-radius: 4px;">BILET #${ticketId}</span>` : '-';
+            tr.innerHTML = `<td><strong>${u.firstName} ${u.lastName}</strong></td><td style="text-align: center;">${ticketDisplay}</td><td>${u.stats.progress || 0}</td><td>T: ${u.stats.correct} | X: ${u.stats.incorrect}</td><td style="text-align: center;"><button class="btn btn-outline" style="border-color: var(--accent); color: var(--accent); font-size: 0.7rem;" onclick="deleteUser('${id}')">O'CHIRISH</button></td>`;
             body.appendChild(tr);
         });
     });
@@ -499,14 +457,14 @@ window.distributeTickets = function() {
     db.ref('users').once('value', (snapshot) => {
         const users = snapshot.val();
         if (!users) return;
-        const updates = {};
         const biletIds = Object.keys(defaultBiletlar);
         if (biletIds.length === 0) return alert("Hali biletlar yaratilmagan!");
+        const updates = {};
         Object.keys(users).forEach(id => {
             const rId = biletIds[Math.floor(Math.random() * biletIds.length)];
             updates[`users/${id}/stats/ticketId`] = rId;
         });
-        db.ref().update(updates).then(() => alert("Biletlar tarqatildi!"));
+        db.ref().update(updates).then(() => { alert("Biletlar muvaffaqiyatli tarqatildi!"); renderAdminUserStats(); });
     });
 }
 
@@ -524,7 +482,7 @@ function renderAdminBilets() {
         questions.forEach((q, qIdx) => {
             qsHtml += `<div style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);"><input type="text" class="input-field b-q-text" data-bid="${id}" data-qidx="${qIdx}" value="${q.q}" placeholder="Savol..." style="width: 80%;"></div>`;
         });
-        biletCard.innerHTML = `<h4>BILET #${id}</h4>${qsHtml}`;
+        biletCard.innerHTML = `<h4>BILET #${id} (${questions.length} savol)</h4>${qsHtml}`;
         container.appendChild(biletCard);
     });
 }
