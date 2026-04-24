@@ -189,22 +189,78 @@
             </div>
         </section>
 
-        <!-- Real Competition Test Page -->
+        <!-- Real Competition Test Page (Fully Featured) -->
         <section id="competitionTestPage" class="page">
-            <div class="comp-header">
-                <div class="comp-header-left">
-                    <span class="comp-badge">LIVE BELLASHUV</span>
-                    <h2 id="compTicketDisplay">BILET #--</h2>
-                </div>
-                <div id="studentTimer" class="premium-timer">00:00</div>
-            </div>
-            
-            <div class="comp-container">
-                <div id="compTestContent" class="comp-questions-grid"></div>
+            <div class="comp-layout">
+                <!-- Sidebar: Profile, Formulas, Calculator -->
+                <aside class="comp-sidebar">
+                    <div class="card glass-card sidebar-profile">
+                        <div class="profile-avatar-mini">👤</div>
+                        <h3 id="compStudentName">TALABA</h3>
+                        <div class="side-stats">
+                            <div class="side-stat-item">
+                                <span class="label">TO'G'RI</span>
+                                <span class="val" id="sideCorrect" style="color: #2ecc71;">0</span>
+                            </div>
+                            <div class="side-stat-item">
+                                <span class="label">XATO</span>
+                                <span class="val" id="sideIncorrect" style="color: var(--accent);">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulas Accordion -->
+                    <div class="comp-accordion">
+                        <button class="accordion-btn" onclick="toggleAccordion('formulaBox')">📚 FORMULALAR <span class="arrow">▼</span></button>
+                        <div id="formulaBox" class="accordion-content">
+                            <div class="formula-item">
+                                <strong>Kombinatorika:</strong>
+                                <p>P<sub>n</sub> = n!</p>
+                                <p>C<sub>n</sub><sup>k</sup> = n! / (k!(n-k)!)</p>
+                            </div>
+                            <div class="formula-item">
+                                <strong>Ehtimollik:</strong>
+                                <p>P(A) = m / n</p>
+                                <p>P(Ā) = 1 - P(A)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Calculator Accordion -->
+                    <div class="comp-accordion">
+                        <button class="accordion-btn" onclick="toggleAccordion('calcBox')">🧮 KALKULYATOR <span class="arrow">▼</span></button>
+                        <div id="calcBox" class="accordion-content">
+                            <select id="calcType" class="input-field" style="font-size: 0.8rem; margin-bottom: 0.5rem;" onchange="updateCalcUI()">
+                                <option value="Pn">P(n) - O'rin almashtirish</option>
+                                <option value="Cnk">C(n, k) - Guruhlash</option>
+                                <option value="Ank">A(n, k) - O'rinlashtirish</option>
+                            </select>
+                            <div id="calcInputs" style="display: grid; gap: 0.5rem;">
+                                <input type="number" id="calcN" class="input-field" placeholder="n =">
+                                <input type="number" id="calcK" class="input-field" placeholder="k =" style="display:none;">
+                                <button class="btn btn-primary" style="padding: 10px; font-size: 0.8rem;" onclick="calculateFormula()">HISOBLASH</button>
+                                <div id="calcResult" style="margin-top: 0.5rem; font-weight: 800; color: var(--gold); text-align: center; font-size: 1.1rem;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Main Content: Questions -->
+                <main class="comp-main">
+                    <div class="comp-header">
+                        <div class="comp-header-left">
+                            <span class="comp-badge">LIVE BELLASHUV</span>
+                            <h2 id="compTicketDisplay">BILET #--</h2>
+                        </div>
+                        <div id="studentTimer" class="premium-timer">00:00</div>
+                    </div>
+                    
+                    <div id="compTestContent" class="comp-questions-grid"></div>
+                </main>
             </div>
 
-            <div style="margin-top: 3rem; text-align: center; padding-bottom: 5rem;">
-                <button class="btn btn-outline" onclick="showPage('dashboardPage')" style="width: 250px; border-color: rgba(255,255,255,0.2);">CHIQISH VA SAQLASH_</button>
+            <div style="text-align: center; padding: 2rem 0 5rem;">
+                <button class="btn btn-outline" onclick="showPage('dashboardPage')" style="width: 250px;">CHIQISH VA SAQLASH_</button>
             </div>
         </section>
 

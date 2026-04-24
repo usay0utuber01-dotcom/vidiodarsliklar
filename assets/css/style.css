@@ -1207,6 +1207,130 @@ select.input-field {
     background: var(--gold);
     animation: loadingLine 2s infinite linear;
 }
+/* --- Math Challenge Inspired Comp Layout --- */
+.comp-layout {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.comp-sidebar {
+    width: 320px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.comp-main {
+    flex-grow: 1;
+}
+
+.sidebar-profile {
+    text-align: center;
+    padding: 2rem 1.5rem;
+    border-top: 5px solid var(--primary);
+}
+
+.profile-avatar-mini {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+}
+
+.side-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--glass-border);
+}
+
+.side-stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.side-stat-item .label {
+    font-size: 0.6rem;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+}
+
+.side-stat-item .val {
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+/* Accordion Styles */
+.comp-accordion {
+    background: var(--bg-card);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.accordion-btn {
+    width: 100%;
+    padding: 1.2rem;
+    background: rgba(255,255,255,0.03);
+    border: none;
+    color: #fff;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 1px;
+}
+
+.accordion-btn:hover {
+    background: rgba(255,255,255,0.06);
+}
+
+.accordion-content {
+    padding: 1.5rem;
+    display: none; /* Controlled by JS */
+    border-top: 1px solid var(--glass-border);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.formula-item {
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.formula-item strong {
+    color: var(--primary);
+    display: block;
+    margin-bottom: 0.3rem;
+}
+
+.formula-item p {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-main);
+    background: rgba(0,0,0,0.2);
+    padding: 5px 10px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+}
+
+@media (max-width: 992px) {
+    .comp-layout {
+        flex-direction: column;
+    }
+    .comp-sidebar {
+        width: 100%;
+    }
+}
 
 @keyframes loadingLine {
     from { left: -50%; }

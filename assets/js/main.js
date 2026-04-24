@@ -313,9 +313,60 @@ window.joinCompetitionAction = function() {
     });
 }
 
+// Sidebar Accordion Logic
+window.toggleAccordion = function(id) {
+    const el = document.getElementById(id);
+    const isVisible = el.style.display === 'block';
+    // Close others
+    document.querySelectorAll('.accordion-content').forEach(c => c.style.display = 'none');
+    document.querySelectorAll('.arrow').forEach(a => a.style.transform = 'rotate(0deg)');
+    
+    if (!isVisible) {
+        el.style.display = 'block';
+        el.previousElementSibling.querySelector('.arrow').style.transform = 'rotate(180deg)';
+    }
+}
+
+// Calculator Logic
+window.updateCalcUI = function() {
+    const type = document.getElementById('calcType').value;
+    const kInput = document.getElementById('calcK');
+    kInput.style.display = (type === 'Pn') ? 'none' : 'block';
+}
+
+window.calculateFormula = function() {
+    const type = document.getElementById('calcType').value;
+    const n = parseInt(document.getElementById('calcN').value);
+    const k = parseInt(document.getElementById('calcK').value);
+    const resEl = document.getElementById('calcResult');
+
+    if (isNaN(n) || n < 0) return resEl.innerText = "Noto'g'ri son!";
+
+    const fact = (num) => (num <= 1) ? 1 : num * fact(num - 1);
+
+    if (type === 'Pn') {
+        if (n > 170) return resEl.innerText = "Juda katta!";
+        resEl.innerText = fact(n).toLocaleString();
+    } else if (type === 'Cnk') {
+        if (isNaN(k) || k < 0 || k > n) return resEl.innerText = "k xato!";
+        const res = fact(n) / (fact(k) * fact(n - k));
+        resEl.innerText = Math.round(res).toLocaleString();
+    } else if (type === 'Ank') {
+        if (isNaN(k) || k < 0 || k > n) return resEl.innerText = "k xato!";
+        const res = fact(n) / fact(n - k);
+        resEl.innerText = Math.round(res).toLocaleString();
+    }
+}
+
 function startCompetition(id) {
     if(!id || id === 'BIRIKTIRILMAGAN') return alert("Sizga bilet biriktirilmagan!");
     joriyTestTuri = 'competition';
+    
+    // Sidebar Updates
+    document.getElementById('compStudentName').innerText = `${foydalanuvchi.firstName} ${foydalanuvchi.lastName}`.toUpperCase();
+    document.getElementById('sideCorrect').innerText = foydalanuvchi.stats.correct || 0;
+    document.getElementById('sideIncorrect').innerText = foydalanuvchi.stats.incorrect || 0;
+    
     document.getElementById('compTicketDisplay').innerText = `BILET #${id}`;
     
     const container = document.getElementById('compTestContent');
@@ -392,9 +443,15 @@ window.answerCompQuestion = function(qIdx, val) {
     const answers = foydalanuvchi.stats.answers || {};
     answers[qIdx] = val;
     
+    const newCorrect = (foydalanuvchi.stats.correct || 0) + (isCorrect ? 1 : 0);
+    const newIncorrect = (foydalanuvchi.stats.incorrect || 0) + (isCorrect ? 0 : 1);
+
+    document.getElementById('sideCorrect').innerText = newCorrect;
+    document.getElementById('sideIncorrect').innerText = newIncorrect;
+
     db.ref('users/' + foydalanuvchi.id + '/stats').update({
-        correct: (foydalanuvchi.stats.correct || 0) + (isCorrect ? 1 : 0),
-        incorrect: (foydalanuvchi.stats.incorrect || 0) + (isCorrect ? 0 : 1),
+        correct: newCorrect,
+        incorrect: newIncorrect,
         answers: answers,
         lastSeen: new Date().toLocaleString()
     });
