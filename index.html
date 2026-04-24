@@ -13,13 +13,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <link rel="stylesheet" href="assets/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-
-    <!-- Loading Screen -->
-    <div id="loader" class="loader-overlay" style="display: none;">
-        <div class="spinner"></div>
-    </div>
 
     <!-- Notification Container -->
     <div id="notification-container"></div>
@@ -36,34 +32,19 @@
     <!-- App Container -->
     <div class="container">
         
-        <!-- 1. LANDING PAGE (Auth Selection) -->
+        <!-- 1. LANDING PAGE -->
         <section id="page-landing" class="page active">
             <div class="landing-container">
-                <div class="landing-visual">
-                    <div class="glow-orb"></div>
-                    <div class="floating-icons">
-                        <span class="icon-f">📚</span>
-                        <span class="icon-f">🎓</span>
-                        <span class="icon-f">🏆</span>
-                        <span class="icon-f">⚡</span>
-                    </div>
-                </div>
                 <div class="landing-content">
-                    <div class="badge-new">PROFESSIONAL EDUCATION</div>
+                    <div class="badge-new">CYBER SECURITY & IT</div>
                     <h1>VD<span>AKADEMIYA</span></h1>
-                    <p>Dunyo standartlaridagi darslar va bilimlar bellashuvi. <br> O'z sohangizning yetuk mutaxassisi bo'ling!</p>
-                    
+                    <p>Professional kurslar va bilimlar bellashuvi. <br> Kelajak kasblarini biz bilan o'rganing!</p>
                     <div class="main-buttons">
-                        <button class="btn btn-primary btn-lg" onclick="app.showPage('page-student-login')">
-                            DARSGA KIRISH_
-                        </button>
-                        <button class="btn btn-outline btn-lg" onclick="app.showPage('page-register')">
-                            RO'YXATDAN O'TISH
-                        </button>
+                        <button class="btn btn-primary btn-lg" onclick="app.showPage('page-student-login')">KIRISH_</button>
+                        <button class="btn btn-outline btn-lg" onclick="app.showPage('page-register')">RO'YXATDAN O'TISH</button>
                     </div>
-                    
-                    <div class="admin-access">
-                        <button class="btn btn-link" onclick="app.showPage('page-admin-login')">ADMIN TERMINAL_</button>
+                    <div style="margin-top: 2rem;">
+                        <button class="btn btn-link" onclick="app.showPage('page-admin-login')">ADMIN PANEL_</button>
                     </div>
                 </div>
             </div>
@@ -72,189 +53,143 @@
         <!-- 2. REGISTER PAGE -->
         <section id="page-register" class="page">
             <div class="auth-card">
-                <button class="back-circle-btn" onclick="app.showPage('page-landing')">←</button>
+                <button class="back-btn" onclick="app.showPage('page-landing')">← Orqaga</button>
                 <h2>Ro'yxatdan o'tish</h2>
-                <p class="subtitle">Ma'lumotlaringizni kiriting va tizim sizga login beradi</p>
                 <div class="input-group">
-                    <label>Ismingiz</label>
-                    <input type="text" id="reg-firstname" placeholder="Masalan: Ali" autocomplete="off">
+                    <label>Ism</label>
+                    <input type="text" id="reg-firstname" placeholder="Ali">
                 </div>
                 <div class="input-group">
-                    <label>Familiyangiz</label>
-                    <input type="text" id="reg-lastname" placeholder="Masalan: Valiyev" autocomplete="off">
+                    <label>Familiya</label>
+                    <input type="text" id="reg-lastname" placeholder="Valiyev">
                 </div>
                 <button class="btn btn-primary w-100" onclick="app.register()">DAVOM ETISH_</button>
-                <p class="auth-footer">Akkauntingiz bormi? <a href="#" onclick="app.showPage('page-student-login')">Kirish</a></p>
             </div>
         </section>
 
         <!-- 3. STUDENT LOGIN PAGE -->
         <section id="page-student-login" class="page">
             <div class="auth-card">
-                <button class="back-circle-btn" onclick="app.showPage('page-landing')">←</button>
+                <button class="back-btn" onclick="app.showPage('page-landing')">← Orqaga</button>
                 <h2>O'quvchi kirishi</h2>
-                <p class="subtitle">Ro'yxatdan o'tganda olgan loginni kiriting</p>
                 <div class="input-group">
                     <label>Login (Username)</label>
-                    <input type="text" id="login-username" placeholder="ali_valiyev_123" autocomplete="off">
+                    <input type="text" id="login-username" placeholder="ali_valiyev_123">
                 </div>
-                <button class="btn btn-primary w-100" onclick="app.studentLogin()">TIZIMGA KIRISH_</button>
-                <p class="auth-footer">Hali ro'yxatdan o'tmadingizmi? <a href="#" onclick="app.showPage('page-register')">Ro'yxatdan o'tish</a></p>
+                <button class="btn btn-primary w-100" onclick="app.studentLogin()">KIRISH_</button>
             </div>
         </section>
 
         <!-- 4. ADMIN LOGIN PAGE -->
         <section id="page-admin-login" class="page">
-            <div class="auth-card admin-auth">
-                <button class="back-circle-btn" onclick="app.showPage('page-landing')">←</button>
-                <div class="admin-badge">ADMIN ACCESS</div>
-                <h2>Terminalga Kirish</h2>
+            <div class="auth-card">
+                <button class="back-btn" onclick="app.showPage('page-landing')">← Orqaga</button>
+                <div class="badge-new" style="display:block; margin: 0 auto 1.5rem;">ADMIN PANEL</div>
+                <h2>Kirish</h2>
                 <div class="input-group">
-                    <label>Admin Login</label>
-                    <input type="text" id="admin-user" placeholder="Terminal ID" autocomplete="off">
+                    <label>Login</label>
+                    <input type="text" id="admin-user">
                 </div>
                 <div class="input-group">
-                    <label>Access Password</label>
-                    <input type="password" id="admin-pass" placeholder="••••••••">
+                    <label>Parol</label>
+                    <input type="password" id="admin-pass">
                 </div>
-                <button class="btn btn-secondary w-100" onclick="app.adminLogin()">LOGIN TO TERMINAL_</button>
+                <button class="btn btn-primary w-100" onclick="app.adminLogin()">KIRISH_</button>
             </div>
         </section>
 
         <!-- 5. STUDENT DASHBOARD -->
         <section id="page-student-dashboard" class="page">
+            <button class="back-btn" onclick="app.showPage('page-landing')">← Orqaga</button>
             <div class="dashboard-header">
-                <h2>O'quv darsliklari</h2>
-                <div class="bellashuv-status" id="comp-status-box">
-                    <span class="status-dot"></span>
-                    <span id="comp-status-text">Bellashuv kutilmoqda...</span>
-                </div>
+                <h2>Kurs Darslari</h2>
+                <div id="comp-status-box" class="bellashuv-badge">Bellashuv kutilmoqda...</div>
             </div>
-            <div id="video-grid" class="video-grid">
-                <!-- Videos will be injected here -->
-            </div>
+            <div id="video-grid" class="video-grid"></div>
         </section>
 
-        <!-- 6. ADMIN DASHBOARD -->
-        <section id="page-admin-dashboard" class="page">
-            <div class="admin-tabs">
-                <button class="tab-btn active" id="btn-tab-videos" onclick="app.switchAdminTab('videos')">VIDEOLAR VA TESTLAR</button>
-                <button class="tab-btn" id="btn-tab-competition" onclick="app.switchAdminTab('competition')">BELLASHUV BOSHQARUVI</button>
-                <button class="tab-btn" id="btn-tab-results" onclick="app.switchAdminTab('results')">LIVE NATIJALAR</button>
-            </div>
-
-            <!-- Admin Tab: Videos -->
-            <div id="tab-videos" class="admin-tab-content active">
-                <div class="admin-actions">
-                    <button class="btn btn-primary" onclick="app.openModal('modal-video')">YANGI DARS QO'SHISH +</button>
-                </div>
-                <div id="admin-video-list" class="admin-list"></div>
-            </div>
-
-            <!-- Admin Tab: Competition -->
-            <div id="tab-competition" class="admin-tab-content">
-                <div class="comp-control-card">
-                    <div class="comp-info">
-                        <h3>Bellashuvni Boshqarish</h3>
-                        <p>Tugma bosilganda barcha o'quvchilarda 30 daqiqalik imtihon boshlanadi.</p>
-                    </div>
-                    <div class="comp-timer-display" id="admin-timer">30:00</div>
-                    <div class="comp-btns">
-                        <button class="btn btn-success" id="btn-start-comp" onclick="app.toggleCompetition(true)">BELLASHUVNI BOSHLASH</button>
-                        <button class="btn btn-danger" id="btn-stop-comp" onclick="app.toggleCompetition(false)" style="display: none;">BELLASHUVNI TO'XTATISH</button>
+        <!-- 6. LESSON VIEW PAGE -->
+        <section id="page-lesson-view" class="page">
+            <button class="back-btn" onclick="app.showPage('page-student-dashboard')">← Kursga qaytish</button>
+            <div class="lesson-layout">
+                <div class="video-section">
+                    <h2 id="lesson-title">Dars sarlavhasi</h2>
+                    <div class="video-wrapper">
+                        <iframe id="lesson-iframe" src="" frameborder="0" allowfullscreen></iframe>
                     </div>
                 </div>
-            </div>
-
-            <!-- Admin Tab: Results -->
-            <div id="tab-results" class="admin-tab-content">
-                <div class="results-header">
-                    <h3>Jonli Natijalar Jadvali</h3>
-                    <button class="btn btn-outline" onclick="app.exportExcel()">EXCEL YUKLAB OLISH (.xlsx)</button>
-                </div>
-                <div class="table-responsive">
-                    <table class="data-table" id="results-table">
-                        <thead>
-                            <tr>
-                                <th>O'rin</th>
-                                <th>Ism Familiya</th>
-                                <th>Username</th>
-                                <th>To'g'ri</th>
-                                <th>Noto'g'ri</th>
-                                <th>Ball</th>
-                                <th>Holat</th>
-                            </tr>
-                        </thead>
-                        <tbody id="results-body"></tbody>
-                    </table>
+                <div class="test-section" id="lesson-test-section">
+                    <h3>Dars yuzasidan test</h3>
+                    <div id="lesson-questions-container"></div>
+                    <button class="btn btn-primary w-100" onclick="app.submitLessonTest()">TESTNI YAKUNLASH_</button>
                 </div>
             </div>
         </section>
 
-        <!-- 7. COMPETITION TEST PAGE -->
+        <!-- 7. COMPETITION PAGE -->
         <section id="page-competition" class="page">
+            <button class="back-btn" onclick="app.showPage('page-student-dashboard')">← Orqaga</button>
             <div class="test-header">
-                <div class="test-info">
-                    <h2>INTELEKTUAL BELLASHUV</h2>
-                    <p id="test-progress">Savol: 1 / 20</p>
-                </div>
-                <div class="test-timer" id="student-timer">30:00</div>
+                <h2 id="comp-title">BELLASHUV</h2>
+                <div id="student-timer" class="timer">30:00</div>
             </div>
-            <div class="test-container" id="test-container">
-                <!-- Question will be injected here -->
+            <div id="test-container" class="test-container"></div>
+        </section>
+
+        <!-- 8. ADMIN DASHBOARD -->
+        <section id="page-admin-dashboard" class="page">
+            <button class="back-btn" onclick="app.showPage('page-landing')">← Orqaga</button>
+            <div class="admin-tabs" style="margin-top: 1rem;">
+                <button class="tab-btn active" onclick="app.switchAdminTab('videos')">DARSLAR</button>
+                <button class="tab-btn" onclick="app.switchAdminTab('competition')">BELLASHUV</button>
+                <button class="tab-btn" onclick="app.switchAdminTab('results')">NATIJALAR</button>
+            </div>
+            
+            <div id="tab-videos" class="admin-tab-content active">
+                <div id="admin-video-list"></div>
+            </div>
+
+            <div id="tab-competition" class="admin-tab-content">
+                <div class="comp-box">
+                    <div id="admin-timer" class="timer">30:00</div>
+                    <button class="btn btn-primary" id="btn-start-comp" onclick="app.toggleCompetition(true)">BOSHLASH</button>
+                    <button class="btn btn-danger" id="btn-stop-comp" onclick="app.toggleCompetition(false)" style="display:none;">TO'XTATISH</button>
+                </div>
+            </div>
+
+            <div id="tab-results" class="admin-tab-content">
+                <button class="btn btn-outline" onclick="app.exportExcel()">EXCEL YUKLAB OLISH</button>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>№</th><th>Ism Familiya</th><th>Darslar</th><th>Bellashuv</th><th>Ball</th></tr>
+                    </thead>
+                    <tbody id="results-body"></tbody>
+                </table>
             </div>
         </section>
 
-        <!-- 8. FINAL RESULT & CERTIFICATE PAGE -->
+        <!-- 9. CERTIFICATE PAGE -->
         <section id="page-final-results" class="page">
-            <div class="final-card">
-                <div class="trophy-box">🏆</div>
-                <h2>Bellashuv Yakunlandi!</h2>
-                <div id="user-final-stats" class="final-stats"></div>
-                
-                <div id="certificate-box" style="display: none;">
-                    <div id="certificate-template" class="certificate">
-                        <div class="cert-border">
-                            <div class="cert-content">
-                                <h1>SERTIFIKAT</h1>
-                                <p class="cert-text">Ushbu hujjat tasdiqlaydiki</p>
-                                <h2 id="cert-name">FOYDALANUVCHI</h2>
-                                <p class="cert-text">bellashuvda faol ishtirok etib,</p>
-                                <div class="cert-rank"><span id="cert-rank-val">1</span>-O'RINNI</div>
-                                <p class="cert-text">egallagani uchun taqdirlanadi.</p>
-                                <div class="cert-footer">
-                                    <div class="cert-date" id="cert-date">24.04.2026</div>
-                                    <div class="cert-sign">ACADEMY SEAL</div>
-                                </div>
-                            </div>
+            <button class="back-btn" onclick="app.showPage('page-student-dashboard')">← Orqaga</button>
+            <div class="final-card" style="margin-top: 1rem;">
+                <div id="certificate-template" class="certificate">
+                    <div class="cert-body">
+                        <div class="cert-header">VD AKADEMIYA</div>
+                        <h1>SERTIFIKAT</h1>
+                        <p>Ushbu hujjat berildi:</p>
+                        <h2 id="cert-name">FOYDALANUVCHI</h2>
+                        <p>Barcha 15 ta darsni muvaffaqiyatli yakunlagani va o'z bilimlarini tasdiqlagani uchun.</p>
+                        <div class="cert-footer">
+                            <div id="cert-date">24.04.2026</div>
+                            <div class="seal">SEAL</div>
                         </div>
                     </div>
-                    <button class="btn btn-primary" onclick="app.downloadCertificate()">SERTIFIKATNI YUKLAB OLISH</button>
                 </div>
-                
-                <button class="btn btn-outline w-100" onclick="app.showPage('page-student-dashboard')">BOSH SAHIFAGA QAYTISH</button>
+                <button class="btn btn-primary btn-lg" onclick="app.downloadCertificate()">SERTIFIKATNI YUKLAB OLISH</button>
+                <button class="btn btn-link" onclick="app.showPage('page-student-dashboard')">BOSH SAHIFAGA QAYTISH</button>
             </div>
         </section>
 
-    </div>
-
-    <!-- Modals -->
-    <div id="modal-video" class="modal">
-        <div class="modal-content">
-            <h3>Yangi Dars Qo'shish</h3>
-            <div class="input-group">
-                <label>Video Sarlavhasi</label>
-                <input type="text" id="vid-title" placeholder="Masalan: 1-Dars: Kirish">
-            </div>
-            <div class="input-group">
-                <label>YouTube Video ID</label>
-                <input type="text" id="vid-id" placeholder="Masalan: dQw4w9WgXcQ">
-            </div>
-            <div class="modal-btns">
-                <button class="btn btn-primary" onclick="app.saveVideo()">SAQLASH</button>
-                <button class="btn btn-link" onclick="app.closeModal('modal-video')">Bekor qilish</button>
-            </div>
-        </div>
     </div>
 
     <!-- Main Script -->
