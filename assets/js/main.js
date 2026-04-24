@@ -142,7 +142,8 @@ function init() {
     
     // Listen for global competition status
     db.ref('competition').on('value', (snapshot) => {
-        activeCompetition = snapshot.val();
+        activeCompetition = snapshot.val() || { isActive: false };
+        updateCompetitionMenus();
         if (document.getElementById('compAuthPage').classList.contains('active')) renderCompAuthPage();
         
         // Timer Logic
@@ -152,6 +153,28 @@ function init() {
             stopCountdown();
         }
     });
+}
+
+function updateCompetitionMenus() {
+    const isActive = activeCompetition && activeCompetition.isActive;
+    
+    // Admin Side
+    const leaderBtn = document.querySelector('button[onclick="toggleAdminView(\'leaderboard\')"]');
+    if (leaderBtn) leaderBtn.style.display = isActive ? 'inline-block' : 'none';
+    
+    // Student Side Navbar
+    const compNavItem = document.querySelector('.nav-item[data-page="compAuthPage"]');
+    if (compNavItem) compNavItem.style.display = isActive ? 'block' : 'none';
+    
+    // If we are currently on the leaderboard but it's now inactive, switch back to modules
+    if (!isActive && isAdmin && document.getElementById('adminLeaderboard').style.display === 'block') {
+        toggleAdminView('modules');
+    }
+    
+    // If student is on compAuthPage but it's now inactive, go to dashboard
+    if (!isActive && !isAdmin && document.getElementById('compAuthPage').classList.contains('active')) {
+        showPage('dashboardPage');
+    }
 }
 
 window.addEventListener('DOMContentLoaded', init);
@@ -265,30 +288,46 @@ function logout() {
 }
 
 // Competition Logic
+let isCompVerified = false;
+
 function renderCompAuthPage() {
     const noComp = document.getElementById('noCompBox');
     const joinComp = document.getElementById('joinCompBox');
+    
     if (activeCompetition && activeCompetition.isActive) {
         noComp.style.display = 'none';
         joinComp.style.display = 'block';
         
-        if (activeCompetition.isStarted) {
-            document.getElementById('joinCompBox').innerHTML = `
-                <div style="font-size: 3rem; margin-bottom: 1rem;">🔥</div>
-                <h3 style="color: var(--primary);">BELLASHUV BOSHLANDI!</h3>
-                <p style="margin-bottom: 1.5rem;">Sizga biriktirilgan bilet: <strong>${foydalanuvchi.stats.ticketId || 'BIRIKTIRILMAGAN'}</strong></p>
-                <button class="btn btn-primary" onclick="startCompetition(${foydalanuvchi.stats.ticketId})" style="width: 100%;">SAVOLLARNI KO'RISH_</button>
+        if (!isCompVerified) {
+            joinComp.innerHTML = `
+                <div style="font-size: 3rem; margin-bottom: 1.5rem;">🔑</div>
+                <h3 style="color: var(--primary); margin-bottom: 1rem;">BELLASHUV KODI</h3>
+                <p style="margin-bottom: 1.5rem; color: var(--text-dim);">Davom etish uchun admin tomonidan berilgan 4 xonali kodni kiriting:</p>
+                <input type="password" id="compJoinCode" class="old-input" placeholder="XXXX" maxlength="4" style="text-align: center; font-size: 2rem; letter-spacing: 10px; margin-bottom: 1.5rem;">
+                <button class="btn btn-primary" onclick="verifyCompCode()" style="width: 100%;">KODNI TASDIQLASH_</button>
             `;
         } else {
-            document.getElementById('joinCompBox').innerHTML = `
-                <p style="margin-bottom: 1.5rem;">Bellashuvda qatnashish uchun admin tomonidan berilgan 4 xonali kodni kiriting:</p>
-                <input type="password" id="compJoinCode" class="old-input" placeholder="XXXX" maxlength="4" style="text-align: center; font-size: 2rem; letter-spacing: 10px;">
-                <button class="btn btn-primary" onclick="verifyCompCode()" style="width: 100%;">BELLASHUVGA KIRISH_</button>
-            `;
+            if (activeCompetition.isStarted) {
+                joinComp.innerHTML = `
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔥</div>
+                    <h3 style="color: var(--primary);">BELLASHUV BOSHLANDI!</h3>
+                    <p style="margin-bottom: 1.5rem; letter-spacing: 1px;">Sizga biriktirilgan bilet: <strong style="color: var(--gold); font-size: 1.2rem;">${foydalanuvchi.stats.ticketId || 'BIRIKTIRILMAGAN'}</strong></p>
+                    <button class="btn btn-primary" onclick="startCompetition(${foydalanuvchi.stats.ticketId})" style="width: 100%; background: var(--gold); color: #000; font-weight: 800;">IMTIHONNI BOSHLASH_</button>
+                `;
+            } else {
+                joinComp.innerHTML = `
+                    <div style="font-size: 4rem; margin-bottom: 1.5rem;">⌛</div>
+                    <h3 style="color: var(--secondary);">TASDIQLANDI</h3>
+                    <p style="color: var(--text-dim); margin-bottom: 1rem;">Siz bellashuvga muvaffaqiyatli kirdingiz.</p>
+                    <div class="loader-line"></div>
+                    <p style="font-size: 0.8rem; color: var(--gold); margin-top: 1rem; letter-spacing: 2px;">ADMIN START BERISHINI KUTING...</p>
+                `;
+            }
         }
     } else {
         noComp.style.display = 'block';
         joinComp.style.display = 'none';
+        isCompVerified = false; // Reset on close
     }
 }
 
@@ -296,7 +335,8 @@ window.verifyCompCode = function() {
     const code = document.getElementById('compJoinCode').value.trim();
     if (code === activeCompetition.code) {
         if (!foydalanuvchi.stats.ticketId) return alert("Sizga hali bilet biriktirilmagan! Admindan so'rang.");
-        alert("Kod tasdiqlandi! Admin 'START' tugmasini bosishini kuting.");
+        isCompVerified = true;
+        renderCompAuthPage();
     } else {
         alert("Noto'g'ri kod!");
     }

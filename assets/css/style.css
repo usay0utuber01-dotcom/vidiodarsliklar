@@ -1028,3 +1028,27 @@ select.input-field {
         padding: 0.3rem 0.5rem;
     }
 }
+
+/* Competition Loader */
+.loader-line {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+    border-radius: 2px;
+}
+.loader-line::after {
+    content: '';
+    position: absolute;
+    left: -50%;
+    height: 100%;
+    width: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 10px var(--gold);
+    animation: loading 2s infinite linear;
+}
+@keyframes loading {
+    from { left: -50%; }
+    to { left: 100%; }
+}
