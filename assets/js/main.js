@@ -133,20 +133,17 @@ function init() {
         showPage(savedPage || 'adminDashboardPage');
     } else if (foydalanuvchi) {
         syncUserSession();
-        // Update last seen to show user is active
         db.ref('users/' + foydalanuvchi.id + '/stats').update({ lastSeen: new Date().toLocaleString() });
         showPage(savedPage || 'dashboardPage');
     } else {
         showPage('loginPage');
     }
     
-    // Listen for global competition status
     db.ref('competition').on('value', (snapshot) => {
         activeCompetition = snapshot.val() || { isActive: false };
         updateCompetitionMenus();
         if (document.getElementById('compAuthPage').classList.contains('active')) renderCompAuthPage();
         
-        // Timer Logic
         if (activeCompetition && activeCompetition.isStarted && activeCompetition.startTime) {
             startCountdown();
         } else {
@@ -158,22 +155,15 @@ function init() {
 function updateCompetitionMenus() {
     const isActive = activeCompetition && activeCompetition.isActive;
     
-    // Admin Side
     const leaderBtn = document.querySelector('button[onclick="toggleAdminView(\'leaderboard\')"]');
     if (leaderBtn) leaderBtn.style.display = isActive ? 'inline-block' : 'none';
     
-    // Student Side Navbar
+    // Always show the button for students, as requested
     const compNavItem = document.querySelector('.nav-item[data-page="compAuthPage"]');
-    if (compNavItem) compNavItem.style.display = isActive ? 'block' : 'none';
+    if (compNavItem) compNavItem.style.display = 'block';
     
-    // If we are currently on the leaderboard but it's now inactive, switch back to modules
     if (!isActive && isAdmin && document.getElementById('adminLeaderboard').style.display === 'block') {
         toggleAdminView('modules');
-    }
-    
-    // If student is on compAuthPage but it's now inactive, go to dashboard
-    if (!isActive && !isAdmin && document.getElementById('compAuthPage').classList.contains('active')) {
-        showPage('dashboardPage');
     }
 }
 
@@ -190,7 +180,6 @@ function setupEventListeners() {
     });
 }
 
-// Auth Tabs Switch
 window.switchAuth = function(type) {
     document.getElementById('loginForm').style.display = type === 'login' ? 'block' : 'none';
     document.getElementById('registerForm').style.display = type === 'register' ? 'block' : 'none';
@@ -198,7 +187,6 @@ window.switchAuth = function(type) {
     document.getElementById('tabRegister').classList.toggle('active', type === 'register');
 }
 
-// Register/Login
 async function register() {
     const first = document.getElementById('regFirst').value.trim();
     const last = document.getElementById('regLast').value.trim();
@@ -221,7 +209,6 @@ function login() {
         if (user && user.pin === code) {
             foydalanuvchi = { id: userId, ...user };
             localStorage.setItem('cyber_user_session', JSON.stringify(foydalanuvchi));
-            // Update last seen
             db.ref('users/' + userId + '/stats').update({ lastSeen: new Date().toLocaleString() });
             syncUserSession();
             showPage('dashboardPage');
@@ -246,7 +233,6 @@ function updateUI() {
     if (welcome && foydalanuvchi) welcome.innerText = `XUSH KELIBSIZ, ${foydalanuvchi.firstName} ${foydalanuvchi.lastName}_`.toUpperCase();
 }
 
-// Page Navigation
 function showPage(id) {
     if (id === 'adminDashboardPage' && !isAdmin) return showPage('adminLoginPage');
     
@@ -287,7 +273,6 @@ function logout() {
     location.reload();
 }
 
-// Competition Logic
 let isCompVerified = false;
 
 function renderCompAuthPage() {
@@ -327,7 +312,7 @@ function renderCompAuthPage() {
     } else {
         noComp.style.display = 'block';
         joinComp.style.display = 'none';
-        isCompVerified = false; // Reset on close
+        isCompVerified = false;
     }
 }
 
@@ -366,14 +351,11 @@ window.answeredQuestions = {};
 
 window.answerCompQuestion = function(qIdx, val) {
     if (window.answeredQuestions[qIdx]) return; 
-    
     const questions = defaultBiletlar[foydalanuvchi.stats.ticketId];
     const q = questions[qIdx];
     const isCorrect = val === q.c;
-    
     window.answeredQuestions[qIdx] = true;
     document.querySelectorAll(`input[name="cq${qIdx}"]`).forEach(inp => inp.disabled = true);
-    
     const statusEl = document.getElementById(`status_cq${qIdx}`);
     if (isCorrect) {
         statusEl.innerText = "TO'G'RI! ✅";
@@ -382,7 +364,6 @@ window.answerCompQuestion = function(qIdx, val) {
         statusEl.innerText = `XATO! ❌ (To'g'ri javob: ${q.c})`;
         statusEl.style.color = "#e74c3c";
     }
-
     db.ref('users/' + foydalanuvchi.id + '/stats').update({
         correct: (foydalanuvchi.stats.correct || 0) + (isCorrect ? 1 : 0),
         incorrect: (foydalanuvchi.stats.incorrect || 0) + (isCorrect ? 0 : 1),
@@ -390,20 +371,10 @@ window.answerCompQuestion = function(qIdx, val) {
     });
 }
 
-window.submitCompTest = function() {
-    alert("Barcha javoblaringiz saqlandi!");
-    showPage('dashboardPage');
-}
+window.submitCompTest = function() { alert("Barcha javoblaringiz saqlandi!"); showPage('dashboardPage'); }
 
-// Admin Logic
-window.openCompSetup = function() {
-    document.getElementById('compSetupModal').style.display = 'flex';
-    renderCompSetupButtons();
-}
-
-window.closeCompSetup = function() {
-    document.getElementById('compSetupModal').style.display = 'none';
-}
+window.openCompSetup = function() { document.getElementById('compSetupModal').style.display = 'flex'; renderCompSetupButtons(); }
+window.closeCompSetup = function() { document.getElementById('compSetupModal').style.display = 'none'; }
 
 window.startNewCompetition = function() {
     const code = document.getElementById('newCompCode').value.trim();
@@ -429,43 +400,27 @@ function startCountdown() {
         const start = activeCompetition.startTime;
         const duration = activeCompetition.duration || (30 * 60 * 1000);
         const diff = (start + duration) - now;
-        
         if (diff <= 0) {
             const timeStr = "00:00";
             if (document.getElementById('studentTimer')) document.getElementById('studentTimer').innerText = timeStr;
             if (document.getElementById('adminTimer')) document.getElementById('adminTimer').innerText = timeStr;
             clearInterval(timerInterval);
-            if (joriyTestTuri === 'competition') {
-                alert("Vaqt tugadi! Test avtomatik yopiladi.");
-                showPage('dashboardPage');
-            }
+            if (joriyTestTuri === 'competition') { alert("Vaqt tugadi! Test avtomatik yopiladi."); showPage('dashboardPage'); }
             return;
         }
-        
-        const minutes = Math.floor(diff / 60000);
-        const seconds = Math.floor((diff % 60000) / 1000);
-        const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        
+        const m = Math.floor(diff / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        const timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         if (document.getElementById('studentTimer')) document.getElementById('studentTimer').innerText = timeStr;
         const adminT = document.getElementById('adminTimer');
         const adminMsg = document.getElementById('adminTimerMsg');
-        if (adminT) {
-            adminT.innerText = timeStr;
-            adminT.style.display = 'inline-block';
-            if (adminMsg) adminMsg.style.display = 'none';
-        }
+        if (adminT) { adminT.innerText = timeStr; adminT.style.display = 'inline-block'; if (adminMsg) adminMsg.style.display = 'none'; }
     };
     updateTimerUI();
     timerInterval = setInterval(updateTimerUI, 1000);
 }
 
-function stopCountdown() {
-    if (timerInterval) clearInterval(timerInterval);
-    const adminT = document.getElementById('adminTimer');
-    const adminMsg = document.getElementById('adminTimerMsg');
-    if (adminT) adminT.style.display = 'none';
-    if (adminMsg) adminMsg.style.display = 'block';
-}
+function stopCountdown() { if (timerInterval) clearInterval(timerInterval); const adminT = document.getElementById('adminTimer'); const adminMsg = document.getElementById('adminTimerMsg'); if (adminT) adminT.style.display = 'none'; if (adminMsg) adminMsg.style.display = 'block'; }
 
 function renderCompSetupButtons() {
     const container = document.querySelector('#compSetupModal div div:last-child');
@@ -526,11 +481,7 @@ function renderAdminUserStats() {
     });
 }
 
-window.deleteUser = function(id) {
-    if(confirm("Foydalanuvchini o'chirmoqchimisiz?")) {
-        db.ref('users/' + id).remove().then(() => alert("Foydalanuvchi o'chirildi!"));
-    }
-}
+window.deleteUser = function(id) { if(confirm("Foydalanuvchini o'chirmoqchimisiz?")) { db.ref('users/' + id).remove().then(() => alert("Foydalanuvchi o'chirildi!")); } }
 
 function listenLeaderboard() {
     db.ref('users').on('value', (snapshot) => {
@@ -552,14 +503,13 @@ window.distributeTickets = function() {
         const biletIds = Object.keys(defaultBiletlar);
         if (biletIds.length === 0) return alert("Hali biletlar yaratilmagan!");
         Object.keys(users).forEach(id => {
-            const randomBiletId = biletIds[Math.floor(Math.random() * biletIds.length)];
-            updates[`users/${id}/stats/ticketId`] = randomBiletId;
+            const rId = biletIds[Math.floor(Math.random() * biletIds.length)];
+            updates[`users/${id}/stats/ticketId`] = rId;
         });
         db.ref().update(updates).then(() => alert("Biletlar tarqatildi!"));
     });
 }
 
-// Bilet Manager
 window.openBiletManager = function() { document.getElementById('biletManagerModal').style.display = 'flex'; renderAdminBilets(); }
 window.closeBiletManager = function() { document.getElementById('biletManagerModal').style.display = 'none'; }
 
@@ -572,9 +522,9 @@ function renderAdminBilets() {
         biletCard.style.background = "rgba(0,0,0,0.3)";
         let qsHtml = "";
         questions.forEach((q, qIdx) => {
-            qsHtml += `<div style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);"><input type="text" class="input-field b-q-text" data-bid="${id}" data-qidx="${qIdx}" value="${q.q}" placeholder="Savol..." style="width: 80%;"> <button onclick="removeQuestionFromBilet('${id}', ${qIdx})">&times;</button></div>`;
+            qsHtml += `<div style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);"><input type="text" class="input-field b-q-text" data-bid="${id}" data-qidx="${qIdx}" value="${q.q}" placeholder="Savol..." style="width: 80%;"></div>`;
         });
-        biletCard.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem;"><h4>BILET #${id}</h4><div><button onclick="addQuestionToBilet('${id}')">+</button> <button onclick="removeBilet('${id}')">O'CHIRISH</button></div></div>${qsHtml}`;
+        biletCard.innerHTML = `<h4>BILET #${id}</h4>${qsHtml}`;
         container.appendChild(biletCard);
     });
 }
@@ -615,33 +565,13 @@ function renderDashboard() {
         const isLocked = i > (foydalanuvchi.stats.progress || 0);
         const card = document.createElement('div');
         card.className = `lesson-card ${isLocked ? 'locked' : ''}`;
-        
-        // Extract YouTube ID
         let ytId = "";
         if (d.v.includes('embed/')) ytId = d.v.split('embed/')[1].split('?')[0];
         else if (d.v.includes('v=')) ytId = d.v.split('v=')[1].split('&')[0];
         else if (d.v.includes('youtu.be/')) ytId = d.v.split('youtu.be/')[1].split('?')[0];
-        
         const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg` : 'assets/img/video-placeholder.jpg';
-        
-        card.innerHTML = `
-            <div class="lesson-thumb" style="background-image: url('${thumbUrl}')">
-                ${isLocked ? '<div class="lock-overlay">🔒</div>' : ''}
-            </div>
-            <div class="lesson-info">
-                <h3>${d.t}</h3>
-                <p class="status">${isLocked ? 'Qulflangan' : '✅ Ochiq'}</p>
-            </div>
-        `;
-        
-        if (!isLocked) {
-            card.onclick = () => { 
-                joriyDars = d; 
-                showPage('lessonPage'); 
-                document.getElementById('lessonTitle').innerText = d.t; 
-                document.getElementById('lessonVideo').src = d.v; 
-            };
-        }
+        card.innerHTML = `<div class="lesson-thumb" style="background-image: url('${thumbUrl}')">${isLocked ? '<div class="lock-overlay">🔒</div>' : ''}</div><div class="lesson-info"><h3>${d.t}</h3><p class="status">${isLocked ? 'Qulflangan' : '✅ Ochiq'}</p></div>`;
+        if (!isLocked) card.onclick = () => { joriyDars = d; showPage('lessonPage'); document.getElementById('lessonTitle').innerText = d.t; document.getElementById('lessonVideo').src = d.v; };
         grid.appendChild(card);
     });
 }
