@@ -259,6 +259,7 @@ function logout() {
 function renderCompAuthPage() {
     const noComp = document.getElementById('noCompBox');
     const joinComp = document.getElementById('joinCompBox');
+    
     if (activeCompetition && activeCompetition.isActive) {
         noComp.style.display = 'none';
         joinComp.style.display = 'block';
@@ -267,26 +268,35 @@ function renderCompAuthPage() {
         
         if (!hasJoined) {
             joinComp.innerHTML = `
-                <div style="font-size: 3rem; margin-bottom: 1.5rem;">🎮</div>
-                <h3 style="color: var(--primary); margin-bottom: 1rem;">BELLASHUV TASHKIL ETILDI!</h3>
-                <p style="margin-bottom: 1.5rem; color: var(--text-dim);">Qatnashish uchun tugmani bosing. Ismingiz admin jadvalida ko'rinadi.</p>
-                <button class="btn btn-primary" onclick="joinCompetitionAction()" style="width: 100%;">BELLASHUVGA KIRISH_</button>
+                <div style="font-size: 5rem; margin-bottom: 2rem;">🎮</div>
+                <h2 style="color: var(--primary); margin-bottom: 1rem; letter-spacing: 2px;">BELLASHUV TASHKIL ETILDI!</h2>
+                <p style="margin-bottom: 2.5rem; color: var(--text-dim); line-height: 1.8;">
+                    Intelektual bellashuvda qatnashish uchun "QATNASHISH" tugmasini bosing. <br>
+                    Ism-familiyangiz admin jadvalida paydo bo'ladi.
+                </p>
+                <button class="btn btn-primary" onclick="joinCompetitionAction()" style="width: 100%; height: 60px; font-size: 1.1rem;">QATNASHISH_</button>
             `;
         } else {
             if (activeCompetition.isStarted) {
                 joinComp.innerHTML = `
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔥</div>
-                    <h3 style="color: var(--primary);">BELLASHUV BOSHLANDI!</h3>
-                    <p style="margin-bottom: 1.5rem; letter-spacing: 1px;">Sizga biriktirilgan bilet: <strong style="color: var(--gold); font-size: 1.2rem;">${foydalanuvchi.stats.ticketId || 'BIRIKTIRILMAGAN'}</strong></p>
-                    <button class="btn btn-primary" onclick="startCompetition(${foydalanuvchi.stats.ticketId})" style="width: 100%; background: var(--gold); color: #000; font-weight: 800;">IMTIHONNI BOSHLASH_</button>
+                    <div style="font-size: 5rem; margin-bottom: 2rem; animation: pulseIcon 2s infinite;">🔥</div>
+                    <h2 style="color: var(--primary); letter-spacing: 2px;">BELLASHUV BOSHLANDI!</h2>
+                    <p style="margin-bottom: 2rem; letter-spacing: 1px; color: var(--text-dim);">
+                        Sizga biriktirilgan bilet raqami: <br>
+                        <strong style="color: var(--gold); font-size: 2.5rem; display: block; margin-top: 10px;">${foydalanuvchi.stats.ticketId || '...'}</strong>
+                    </p>
+                    <button class="btn btn-primary" onclick="startCompetition(${foydalanuvchi.stats.ticketId})" style="width: 100%; height: 60px; font-size: 1.1rem; background: var(--gold); color: #000;">IMTIHONNI BOSHLASH_</button>
                 `;
             } else {
                 joinComp.innerHTML = `
-                    <div style="font-size: 4rem; margin-bottom: 1.5rem;">⌛</div>
-                    <h3 style="color: var(--secondary);">RO'YXATDAN O'TDINGIZ</h3>
-                    <p style="color: var(--text-dim); margin-bottom: 1.5rem;">Siz bellashuv ishtirokchilari jadvaliga qo'shildingiz.</p>
+                    <div style="font-size: 5rem; margin-bottom: 2rem;">🤝</div>
+                    <h2 style="color: var(--secondary); letter-spacing: 2px;">SIZ RO'YXATDASIZ</h2>
+                    <p style="color: var(--text-dim); margin-bottom: 2.5rem; line-height: 1.8;">
+                        Siz muvaffaqiyatli ro'yxatdan o'tdingiz. <br>
+                        Hozirda ustoz biletlarni tarqatmoqda...
+                    </p>
                     <div class="loader-line"></div>
-                    <p style="font-size: 0.8rem; color: var(--gold); margin-top: 1.5rem; letter-spacing: 2px;">USTOZ START BERISHINI KUTING...</p>
+                    <p style="font-size: 0.8rem; color: var(--gold); margin-top: 1.5rem; letter-spacing: 3px; font-weight: 800;">TAYYOR TURING...</p>
                 `;
             }
         }
@@ -307,37 +317,88 @@ function startCompetition(id) {
     if(!id || id === 'BIRIKTIRILMAGAN') return alert("Sizga bilet biriktirilmagan!");
     joriyTestTuri = 'competition';
     document.getElementById('compTicketDisplay').innerText = `BILET #${id}`;
+    
     const container = document.getElementById('compTestContent');
     const questions = defaultBiletlar[id];
+    
+    // Initialize session answers if not exists
+    if (!foydalanuvchi.stats.answers) foydalanuvchi.stats.answers = {};
+    
     let html = "";
     questions.forEach((q, i) => {
+        const userAns = foydalanuvchi.stats.answers[i];
+        const isSolved = userAns !== undefined;
+        const isCorrect = isSolved && userAns === q.c;
+        
+        let statusClass = "pending";
+        let statusIcon = "⏳";
+        if (isSolved) {
+            statusClass = isCorrect ? "solved" : "failed";
+            statusIcon = isCorrect ? "✅" : "❌";
+        }
+
         let opts = "";
-        q.a.forEach(opt => opts += `<label class="option-label"><input type="radio" name="cq${i}" value="${opt}" onchange="answerCompQuestion(${i}, this.value)"> ${opt}</label>`);
-        html += `<div class="card" style="margin-bottom: 1.5rem;"><p style="font-weight: 700; margin-bottom: 1rem;">${i+1}. ${q.q}</p><div class="test-options">${opts}</div><div id="status_cq${i}" style="margin-top: 0.5rem; font-size: 0.8rem; font-weight: 700;"></div></div>`;
+        q.a.forEach(opt => {
+            const checked = userAns === opt ? "checked" : "";
+            const disabled = isSolved ? "disabled" : "";
+            opts += `<label class="option-label ${isSolved ? 'locked' : ''}"><input type="radio" name="cq${i}" value="${opt}" ${checked} ${disabled} onchange="answerCompQuestion(${i}, this.value)"> ${opt}</label>`;
+        });
+
+        html += `
+            <div class="q-card-premium ${statusClass}" id="q_card_${i}">
+                <div class="q-header">
+                    <span class="q-num">SAVOL #${i+1}</span>
+                    <span class="q-status-icon" id="q_icon_${i}">${statusIcon}</span>
+                </div>
+                <p class="q-text">${q.q}</p>
+                <div class="test-options">
+                    ${opts}
+                </div>
+                <div id="status_msg_${i}" style="font-size: 0.8rem; font-weight: 700; color: ${isCorrect ? '#2ecc71' : 'var(--accent)'}; margin-top: 0.5rem;">
+                    ${isSolved ? (isCorrect ? "TO'G'RI JAVOB! ✅" : `XATO! TO'G'RI JAVOB: ${q.c} ❌`) : ""}
+                </div>
+            </div>
+        `;
     });
+    
     container.innerHTML = html;
     showPage('competitionTestPage');
 }
 
-window.answeredQuestions = {}; 
 window.answerCompQuestion = function(qIdx, val) {
-    if (window.answeredQuestions[qIdx]) return; 
-    const questions = defaultBiletlar[foydalanuvchi.stats.ticketId];
+    const ticketId = foydalanuvchi.stats.ticketId;
+    const questions = defaultBiletlar[ticketId];
     const q = questions[qIdx];
     const isCorrect = val === q.c;
-    window.answeredQuestions[qIdx] = true;
-    document.querySelectorAll(`input[name="cq${qIdx}"]`).forEach(inp => inp.disabled = true);
-    const statusEl = document.getElementById(`status_cq${qIdx}`);
-    if (isCorrect) { statusEl.innerText = "TO'G'RI! ✅"; statusEl.style.color = "#2ecc71"; }
-    else { statusEl.innerText = `XATO! ❌ (To'g'ri javob: ${q.c})`; statusEl.style.color = "#e74c3c"; }
+    
+    // Immediate UI Feedback
+    const card = document.getElementById(`q_card_${qIdx}`);
+    const icon = document.getElementById(`q_icon_${qIdx}`);
+    const msg = document.getElementById(`status_msg_${qIdx}`);
+    
+    card.classList.remove('pending');
+    card.classList.add(isCorrect ? 'solved' : 'failed');
+    icon.innerText = isCorrect ? "✅" : "❌";
+    msg.innerText = isCorrect ? "TO'G'RI JAVOB! ✅" : `XATO! TO'G'RI JAVOB: ${q.c} ❌`;
+    msg.style.color = isCorrect ? "#2ecc71" : "var(--accent)";
+    
+    // Disable inputs
+    document.querySelectorAll(`input[name="cq${qIdx}"]`).forEach(inp => {
+        inp.disabled = true;
+        inp.parentElement.classList.add('locked');
+    });
+
+    // Update Firebase and Local Session
+    const answers = foydalanuvchi.stats.answers || {};
+    answers[qIdx] = val;
+    
     db.ref('users/' + foydalanuvchi.id + '/stats').update({
         correct: (foydalanuvchi.stats.correct || 0) + (isCorrect ? 1 : 0),
         incorrect: (foydalanuvchi.stats.incorrect || 0) + (isCorrect ? 0 : 1),
+        answers: answers,
         lastSeen: new Date().toLocaleString()
     });
 }
-
-window.submitCompTest = function() { alert("Barcha javoblaringiz saqlandi!"); showPage('dashboardPage'); }
 
 // Admin Logic
 window.startNewCompetitionAction = function() {

@@ -176,36 +176,35 @@
 
         <!-- Competition Auth Page -->
         <section id="compAuthPage" class="page">
-            <div class="card" style="text-align: center; max-width: 500px; margin: 0 auto;">
-                <h2 style="color: var(--bg-dark); margin-bottom: 1rem;">INTELEKTUAL BELLASHUV</h2>
-                
+            <div class="card glass-card" style="text-align: center; max-width: 600px; margin: 2rem auto; padding: 3rem;">
                 <div id="noCompBox" style="display: none;">
-                    <div style="font-size: 4rem; margin-bottom: 1rem;">⌛</div>
-                    <p style="color: var(--text-dim);">Hozirda faol bellashuv mavjud emas.</p>
+                    <div style="font-size: 5rem; margin-bottom: 2rem; filter: grayscale(1);">⌛</div>
+                    <h2 style="color: var(--text-dim); margin-bottom: 1rem;">FAOL BELLASHUV YO'Q</h2>
+                    <p style="color: var(--text-dim); opacity: 0.6;">Hozirda hech qanday bellashuv o'tkazilmayapti. <br> Iltimos, ustoz xabarini kuting.</p>
                 </div>
 
                 <div id="joinCompBox" style="display: none;">
-                    <p style="margin-bottom: 1.5rem;">Bellashuvda qatnashish uchun admin tomonidan berilgan 4 xonali kodni kiriting:</p>
-                    <input type="password" id="compJoinCode" class="old-input" placeholder="XXXX" maxlength="4" style="text-align: center; font-size: 2rem; letter-spacing: 10px;">
-                    <button class="btn btn-primary" onclick="verifyCompCode()" style="width: 100%;">BELLASHUVGA KIRISH_</button>
+                    <!-- Content will be injected by JS -->
                 </div>
             </div>
         </section>
 
         <!-- Real Competition Test Page -->
         <section id="competitionTestPage" class="page">
-            <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--gold);">
-                <div style="background: var(--bg-dark); padding: 1.5rem 2rem; color: #fff; display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 1.5rem;">
-                        <span style="font-weight: 700; letter-spacing: 1px;">FAOL BELLASHUV</span>
-                        <div id="studentTimer" class="premium-timer">30:00</div>
-                    </div>
-                    <span id="compTicketDisplay" class="ticket-badge">BILET #</span>
+            <div class="comp-header">
+                <div class="comp-header-left">
+                    <span class="comp-badge">LIVE BELLASHUV</span>
+                    <h2 id="compTicketDisplay">BILET #--</h2>
                 </div>
-                <div style="padding: 2.5rem;">
-                    <div id="compTestContent"></div>
-                    <button class="btn btn-primary" onclick="submitCompTest()" style="margin-top: 2rem; width: 100%; background: var(--gold); color: #000;">NATIJANI YUBORISH_</button>
-                </div>
+                <div id="studentTimer" class="premium-timer">00:00</div>
+            </div>
+            
+            <div class="comp-container">
+                <div id="compTestContent" class="comp-questions-grid"></div>
+            </div>
+
+            <div style="margin-top: 3rem; text-align: center; padding-bottom: 5rem;">
+                <button class="btn btn-outline" onclick="showPage('dashboardPage')" style="width: 250px; border-color: rgba(255,255,255,0.2);">CHIQISH VA SAQLASH_</button>
             </div>
         </section>
 
