@@ -270,12 +270,13 @@
                         <span id="demoBadge" style="display:none; background: var(--accent); color: #fff; font-size: 0.6rem; padding: 2px 8px; border-radius: 4px; margin-left: 10px; vertical-align: middle;">DEMO REJIM</span>
                     </p>
                 </div>
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                    <button class="btn btn-outline" onclick="toggleAdminView('modules')">DARSLAR</button>
-                    <button class="btn btn-outline" onclick="openBiletManager()" style="border-color: var(--primary); color: var(--primary);">BILETLAR</button>
+                <!-- Admin Actions -->
+                <div style="display: flex; gap: 1rem; margin-bottom: 2.5rem; flex-wrap: wrap;">
+                    <button class="btn btn-outline" onclick="toggleAdminView('modules')">DARSLARNI BOSHQARISH</button>
                     <button class="btn btn-outline" onclick="toggleAdminView('users')">FOYDALANUVCHILAR</button>
-                    <button class="btn btn-outline" onclick="toggleAdminView('leaderboard')" style="border-color: var(--gold); color: var(--gold);">BELLASHUV JADVALI</button>
-                    <button class="btn btn-primary" onclick="openCompSetup()" style="background: var(--bg-dark); color: #fff;">BELLASHUV TASHKIL ETISH_</button>
+                    <button class="btn btn-primary" onclick="startNewCompetitionAction()" style="background: var(--gold); color: #000;">BELLASHUV TASHKIL QILISH_</button>
+                    <button class="btn btn-outline" id="leaderboardToggleBtn" onclick="toggleAdminView('leaderboard')" style="display:none; border-color: var(--secondary); color: var(--secondary);">BELLASHUV JADVALI (LIVE)_</button>
+                    <button class="btn btn-outline" onclick="openBiletManager()" style="border-color: #9b59b6; color: #9b59b6;">BILETLAR_</button>
                     <button class="btn btn-primary" onclick="openModuleModal()">YANGI DARS +</button>
                 </div>
             </div>
@@ -304,32 +305,37 @@
             </div>
 
             <div id="adminLeaderboard" class="admin-view-section" style="display:none;">
-                <div class="card" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4);">
-                    <div>
-                        <h3 style="color: var(--gold);">BELLASHUV BOSHQARUVI</h3>
-                        <div id="adminTimer" class="premium-timer" style="margin-top: 0.5rem; display: none;">30:00</div>
-                        <p id="adminTimerMsg" style="font-size: 0.8rem; color: #888;">Barcha talabalarga biletlarni tasodifiy tarqatish va natijalarni kuzatish.</p>
-                    </div>
-                    <div style="display: flex; gap: 1rem;">
-                        <button class="btn btn-primary" onclick="distributeTickets()" style="background: var(--gold); color: #000;">BILET TARQATISH_</button>
-                        <button class="btn btn-outline" onclick="exportToExcel()" style="border-color: #2ecc71; color: #2ecc71;">EXCELGA SAQLASH_</button>
-                        <button class="btn btn-outline" onclick="clearLeaderboard()" style="border-color: var(--accent); color: var(--accent);">JADVALNI TOZALASH_</button>
+                <div class="card" style="margin-bottom: 1.5rem; background: rgba(0,212,255,0.05); border: 1px solid var(--secondary);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h2 style="color: var(--secondary); margin:0;">LIVE BELLASHUV JADVALI</h2>
+                            <p style="font-size: 0.8rem; color: #888; margin-top: 5px;">O'quvchilar bellashuvga kirishi bilan ism-familiyalari jadvalda ko'rinadi.</p>
+                        </div>
+                        <div id="adminTimer" class="premium-timer" style="display: none; font-size: 1.5rem;">30:00</div>
                     </div>
                 </div>
-                <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--gold);">
-                    <table class="admin-table leaderboard-table" id="leaderboardTableMain">
+
+                <div class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); background: rgba(10,15,25,0.95);">
+                    <table class="admin-table leaderboard-table" id="leaderboardTableMain" style="width: 100%;">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>FOYDALANUVCHI</th>
-                                <th>BILET #</th>
-                                <th>TO'G'RI</th>
-                                <th>XATO</th>
-                                <th>VAQT</th>
+                                <th style="width: 50px;">#</th>
+                                <th style="text-align: left; padding-left: 20px;">O'QUVCHI ISM-FAMILIYASI</th>
+                                <th style="width: 150px;">BILET #</th>
+                                <th style="width: 100px;">TO'G'RI</th>
+                                <th style="width: 100px;">XATO</th>
+                                <th style="width: 180px;">SO'NGGI FAOLLIK</th>
                             </tr>
                         </thead>
-                        <tbody id="leaderboardBody"></tbody>
+                        <tbody id="leaderboardBody" style="font-size: 1.1rem;"></tbody>
                     </table>
+                </div>
+
+                <div class="card" style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; background: rgba(0,0,0,0.5);">
+                    <button class="btn btn-primary" id="distBtn" onclick="distributeTickets()" style="background: var(--gold); color: #000; flex: 1;">BILETLARNI TARQATISH_</button>
+                    <button class="btn btn-primary" id="startBtn" onclick="startExamAction()" style="background: #2ecc71; flex: 1; display: none;">IMTIHONNI BOSHLASH_</button>
+                    <button class="btn btn-outline" id="stopBtn" onclick="stopCompetition()" style="border-color: var(--accent); color: var(--accent); flex: 1; display: none;">IMTIHONNI TO'XTATISH_</button>
+                    <button class="btn btn-outline" onclick="exportToExcel()" style="border-color: #2ecc71; color: #2ecc71; width: 150px;">EXCEL_</button>
                 </div>
             </div>
         </section>

@@ -34,7 +34,6 @@ if (firebaseConfig.apiKey === "YOUR_API_KEY") {
         return data;
     };
     const saveMockData = (data) => localStorage.setItem('cyber_mock_db', JSON.stringify(data));
-
     const setDeepValue = (obj, path, value) => {
         const parts = path.split('/').filter(p => p);
         let curr = obj;
@@ -44,7 +43,6 @@ if (firebaseConfig.apiKey === "YOUR_API_KEY") {
         }
         curr[parts[parts.length - 1]] = value;
     };
-
     db = {
         ref: (path = "") => ({
             on: (event, callback) => {
@@ -140,11 +138,23 @@ function init() {
 
 function updateCompetitionMenus() {
     const isActive = activeCompetition && activeCompetition.isActive;
-    const leaderBtn = document.querySelector('button[onclick="toggleAdminView(\'leaderboard\')"]');
+    const isStarted = activeCompetition && activeCompetition.isStarted;
+    
+    // Admin Buttons
+    const leaderBtn = document.getElementById('leaderboardToggleBtn');
     if (leaderBtn) leaderBtn.style.display = isActive ? 'inline-block' : 'none';
+    
+    const distBtn = document.getElementById('distBtn');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    
+    if (distBtn) distBtn.style.display = (isActive && !isStarted) ? 'block' : 'none';
+    if (startBtn) startBtn.style.display = (isActive && !isStarted) ? 'block' : 'none';
+    if (stopBtn) stopBtn.style.display = isStarted ? 'block' : 'none';
+
+    // Student Side Navbar
     const compNavItem = document.querySelector('.nav-item[data-page="compAuthPage"]');
     if (compNavItem) compNavItem.style.display = 'block';
-    if (!isActive && isAdmin && document.getElementById('adminLeaderboard').style.display === 'block') toggleAdminView('modules');
 }
 
 window.addEventListener('DOMContentLoaded', init);
@@ -245,20 +255,22 @@ function logout() {
     location.reload();
 }
 
-let isCompVerified = false;
+// Competition Logic
 function renderCompAuthPage() {
     const noComp = document.getElementById('noCompBox');
     const joinComp = document.getElementById('joinCompBox');
     if (activeCompetition && activeCompetition.isActive) {
         noComp.style.display = 'none';
         joinComp.style.display = 'block';
-        if (!isCompVerified) {
+        
+        const hasJoined = foydalanuvchi.stats.isJoined === true;
+        
+        if (!hasJoined) {
             joinComp.innerHTML = `
-                <div style="font-size: 3rem; margin-bottom: 1.5rem;">🔑</div>
-                <h3 style="color: var(--primary); margin-bottom: 1rem;">BELLASHUV KODI</h3>
-                <p style="margin-bottom: 1.5rem; color: var(--text-dim);">Davom etish uchun admin tomonidan berilgan 4 xonali kodni kiriting:</p>
-                <input type="password" id="compJoinCode" class="old-input" placeholder="XXXX" maxlength="4" style="text-align: center; font-size: 2rem; letter-spacing: 10px; margin-bottom: 1.5rem;">
-                <button class="btn btn-primary" onclick="verifyCompCode()" style="width: 100%;">KODNI TASDIQLASH_</button>
+                <div style="font-size: 3rem; margin-bottom: 1.5rem;">🎮</div>
+                <h3 style="color: var(--primary); margin-bottom: 1rem;">BELLASHUV TASHKIL ETILDI!</h3>
+                <p style="margin-bottom: 1.5rem; color: var(--text-dim);">Qatnashish uchun tugmani bosing. Ismingiz admin jadvalida ko'rinadi.</p>
+                <button class="btn btn-primary" onclick="joinCompetitionAction()" style="width: 100%;">BELLASHUVGA KIRISH_</button>
             `;
         } else {
             if (activeCompetition.isStarted) {
@@ -271,27 +283,24 @@ function renderCompAuthPage() {
             } else {
                 joinComp.innerHTML = `
                     <div style="font-size: 4rem; margin-bottom: 1.5rem;">⌛</div>
-                    <h3 style="color: var(--secondary);">TASDIQLANDI</h3>
-                    <p style="color: var(--text-dim); margin-bottom: 1rem;">Siz bellashuvga muvaffaqiyatli kirdingiz.</p>
+                    <h3 style="color: var(--secondary);">RO'YXATDAN O'TDINGIZ</h3>
+                    <p style="color: var(--text-dim); margin-bottom: 1.5rem;">Siz bellashuv ishtirokchilari jadvaliga qo'shildingiz.</p>
                     <div class="loader-line"></div>
-                    <p style="font-size: 0.8rem; color: var(--gold); margin-top: 1rem; letter-spacing: 2px;">ADMIN START BERISHINI KUTING...</p>
+                    <p style="font-size: 0.8rem; color: var(--gold); margin-top: 1.5rem; letter-spacing: 2px;">USTOZ START BERISHINI KUTING...</p>
                 `;
             }
         }
     } else {
         noComp.style.display = 'block';
         joinComp.style.display = 'none';
-        isCompVerified = false;
     }
 }
 
-window.verifyCompCode = function() {
-    const code = document.getElementById('compJoinCode').value.trim();
-    if (code === activeCompetition.code) {
-        if (!foydalanuvchi.stats.ticketId) return alert("Sizga hali bilet biriktirilmagan! Admindan so'rang.");
-        isCompVerified = true;
+window.joinCompetitionAction = function() {
+    db.ref('users/' + foydalanuvchi.id + '/stats').update({ isJoined: true, lastSeen: new Date().toLocaleString() }).then(() => {
+        alert("Siz muvaffaqiyatli qo'shildingiz!");
         renderCompAuthPage();
-    } else alert("Noto'g'ri kod!");
+    });
 }
 
 function startCompetition(id) {
@@ -330,24 +339,30 @@ window.answerCompQuestion = function(qIdx, val) {
 
 window.submitCompTest = function() { alert("Barcha javoblaringiz saqlandi!"); showPage('dashboardPage'); }
 
-window.openCompSetup = function() { document.getElementById('compSetupModal').style.display = 'flex'; renderCompSetupButtons(); }
-window.closeCompSetup = function() { document.getElementById('compSetupModal').style.display = 'none'; }
-
-window.startNewCompetition = function() {
-    const code = document.getElementById('newCompCode').value.trim();
-    if (code.length !== 4) return alert("4 xonali kod kiriting!");
-    db.ref('competition').set({ isActive: true, code: code, isStarted: false }).then(() => {
-        alert("Bellashuv yaratildi! Endi 'START' tugmasini bosing.");
-        renderCompSetupButtons();
-    });
+// Admin Logic
+window.startNewCompetitionAction = function() {
+    if (confirm("Kodsiz yangi bellashuv tashkil qilinsinmi?")) {
+        db.ref('competition').set({ isActive: true, isStarted: false }).then(() => {
+            alert("Bellashuv yaratildi! Endi o'quvchilar qo'shilishini kuting.");
+            toggleAdminView('leaderboard');
+        });
+    }
 }
 
 window.startExamAction = function() {
     const startTime = Date.now();
     db.ref('competition').update({ isStarted: true, startTime: startTime, duration: 30 * 60 * 1000 }).then(() => {
-        alert("Bellashuv BOSHLANDI! Talabalar savollarni ko'rishlari mumkin.");
-        closeCompSetup();
+        alert("Bellashuv BOSHLANDI!");
     });
+}
+
+window.stopCompetition = function() {
+    if (confirm("Bellashuvni to'xtatmoqchimisiz?")) {
+        db.ref('competition').set({ isActive: false, isStarted: false }).then(() => {
+            alert("Bellashuv to'xtatildi!");
+            toggleAdminView('modules');
+        });
+    }
 }
 
 function startCountdown() {
@@ -355,14 +370,12 @@ function startCountdown() {
     const updateTimerUI = () => {
         const now = Date.now();
         const start = activeCompetition.startTime;
-        const duration = activeCompetition.duration || (30 * 60 * 1000);
-        const diff = (start + duration) - now;
+        const diff = (start + (activeCompetition.duration || 1800000)) - now;
         if (diff <= 0) {
-            const timeStr = "00:00";
-            if (document.getElementById('studentTimer')) document.getElementById('studentTimer').innerText = timeStr;
-            if (document.getElementById('adminTimer')) document.getElementById('adminTimer').innerText = timeStr;
+            if (document.getElementById('studentTimer')) document.getElementById('studentTimer').innerText = "00:00";
+            if (document.getElementById('adminTimer')) document.getElementById('adminTimer').innerText = "00:00";
             clearInterval(timerInterval);
-            if (joriyTestTuri === 'competition') { alert("Vaqt tugadi! Test avtomatik yopiladi."); showPage('dashboardPage'); }
+            if (joriyTestTuri === 'competition') showPage('dashboardPage');
             return;
         }
         const m = Math.floor(diff / 60000);
@@ -370,33 +383,13 @@ function startCountdown() {
         const timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         if (document.getElementById('studentTimer')) document.getElementById('studentTimer').innerText = timeStr;
         const adminT = document.getElementById('adminTimer');
-        if (adminT) { adminT.innerText = timeStr; adminT.style.display = 'inline-block'; if (document.getElementById('adminTimerMsg')) document.getElementById('adminTimerMsg').style.display = 'none'; }
+        if (adminT) { adminT.innerText = timeStr; adminT.style.display = 'block'; }
     };
     updateTimerUI();
     timerInterval = setInterval(updateTimerUI, 1000);
 }
 
-function stopCountdown() { if (timerInterval) clearInterval(timerInterval); const adminT = document.getElementById('adminTimer'); if (adminT) adminT.style.display = 'none'; if (document.getElementById('adminTimerMsg')) document.getElementById('adminTimerMsg').style.display = 'block'; }
-
-function renderCompSetupButtons() {
-    const container = document.querySelector('#compSetupModal div div:last-child');
-    if (activeCompetition && activeCompetition.isActive) {
-        container.innerHTML = `
-            <button class="btn btn-primary" onclick="startExamAction()" style="background: #2ecc71;">START (TALABALARGA YUBORISH)_</button>
-            <button class="btn btn-outline" onclick="stopCompetition()" style="border-color: var(--accent); color: var(--accent);">BELLASHUVNI YOPISH_</button>
-            <button class="btn btn-outline" style="border:none;" onclick="closeCompSetup()">BEKOR QILISH</button>
-        `;
-    }
-}
-
-window.stopCompetition = function() {
-    if (confirm("Bellashuvni to'xtatmoqchimisiz?")) {
-        db.ref('competition').set({ isActive: false, isStarted: false }).then(() => {
-            alert("Bellashuv to'xtatildi!");
-            closeCompSetup();
-        });
-    }
-}
+function stopCountdown() { if (timerInterval) clearInterval(timerInterval); const adminT = document.getElementById('adminTimer'); if (adminT) adminT.style.display = 'none'; }
 
 function adminLogin() {
     const u = document.getElementById('adminUser').value;
@@ -419,7 +412,7 @@ function renderAdminDashboard() {
     const list = document.getElementById('adminModulesList');
     let html = '<table class="admin-table"><thead><tr><th>MODUL NOMI</th><th>AMALLAR</th></tr></thead><tbody>';
     defaultDarslar.forEach((d) => {
-        html += `<tr><td style="font-weight: 600;">${d.t}</td><td style="display: flex; gap: 0.5rem;"><button class="btn btn-outline" style="font-size: 0.7rem;" onclick="openTestManager(${d.id})">TESTLAR</button><button class="btn btn-outline" style="font-size: 0.7rem; color: var(--secondary);" onclick="openModuleModal(${d.id})">TAHRIRLASH</button></td></tr>`;
+        html += `<tr><td style="font-weight: 600;">${d.t}</td><td style="display: flex; gap: 0.5rem;"><button class="btn btn-outline" style="font-size: 0.7rem;" onclick="openTestManager(${d.id})">TESTLAR</button></td></tr>`;
     });
     list.innerHTML = html + '</tbody></table>';
 }
@@ -431,9 +424,9 @@ function renderAdminUserStats() {
         body.innerHTML = "";
         Object.entries(users).forEach(([id, u]) => {
             const tr = document.createElement('tr');
-            const ticketId = u.stats.ticketId || '-';
-            const ticketDisplay = ticketId !== '-' ? `<span class="badge" style="background: var(--gold); color: #000; font-weight: 800; padding: 2px 8px; border-radius: 4px;">BILET #${ticketId}</span>` : '-';
-            tr.innerHTML = `<td><strong>${u.firstName} ${u.lastName}</strong></td><td style="text-align: center;">${ticketDisplay}</td><td>${u.stats.progress || 0}</td><td>T: ${u.stats.correct} | X: ${u.stats.incorrect}</td><td style="text-align: center;"><button class="btn btn-outline" style="border-color: var(--accent); color: var(--accent); font-size: 0.7rem;" onclick="deleteUser('${id}')">O'CHIRISH</button></td>`;
+            const progress = u.stats.progress || 0;
+            const currentLesson = defaultDarslar[progress] ? defaultDarslar[progress].t : "TUGATILDI";
+            tr.innerHTML = `<td><strong>${u.firstName} ${u.lastName}</strong></td><td style="color: var(--secondary);">${currentLesson}</td><td>T: ${u.stats.correct} | X: ${u.stats.incorrect}</td><td style="text-align: center;"><button class="btn btn-outline" style="border-color: var(--accent); color: var(--accent); font-size: 0.7rem;" onclick="deleteUser('${id}')">O'CHIRISH</button></td>`;
             body.appendChild(tr);
         });
     });
@@ -445,10 +438,12 @@ function listenLeaderboard() {
     db.ref('users').on('value', (snapshot) => {
         const users = snapshot.val() || {};
         const body = document.getElementById('leaderboardBody');
-        const sorted = Object.entries(users).sort((a,b) => (b[1].stats.correct||0) - (a[1].stats.correct||0));
         body.innerHTML = "";
-        sorted.forEach(([id, u], i) => {
-            body.innerHTML += `<tr><td>${i+1}</td><td>${u.firstName} ${u.lastName}</td><td>${u.stats.ticketId || '-'}</td><td>${u.stats.correct}</td><td>${u.stats.incorrect}</td><td>${u.stats.lastSeen}</td></tr>`;
+        const joinedUsers = Object.entries(users).filter(([id, u]) => u.stats.isJoined === true);
+        joinedUsers.sort((a,b) => (b[1].stats.correct||0) - (a[1].stats.correct||0));
+        joinedUsers.forEach(([id, u], i) => {
+            const ticket = u.stats.ticketId ? `<span style="color: var(--gold); font-weight: 800;">BILET #${u.stats.ticketId}</span>` : '<span style="color: #666;">BIRIKTIRILMAGAN</span>';
+            body.innerHTML += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 1.5rem; text-align: center;">${i+1}</td><td style="padding: 1.5rem; font-weight: 700;">${u.firstName} ${u.lastName}</td><td style="padding: 1.5rem; text-align: center;">${ticket}</td><td style="padding: 1.5rem; text-align: center; color: #2ecc71;">${u.stats.correct || 0}</td><td style="padding: 1.5rem; text-align: center; color: var(--accent);">${u.stats.incorrect || 0}</td><td style="padding: 1.5rem; text-align: center; font-size: 0.8rem; color: #888;">${u.stats.lastSeen}</td></tr>`;
         });
     });
 }
@@ -457,57 +452,39 @@ window.distributeTickets = function() {
     db.ref('users').once('value', (snapshot) => {
         const users = snapshot.val();
         if (!users) return;
+        const joinedUsers = Object.keys(users).filter(id => users[id].stats.isJoined === true);
+        if (joinedUsers.length === 0) return alert("Hali hech kim qo'shilmadi!");
         const biletIds = Object.keys(defaultBiletlar);
-        if (biletIds.length === 0) return alert("Hali biletlar yaratilmagan!");
         const updates = {};
-        Object.keys(users).forEach(id => {
+        joinedUsers.forEach(id => {
             const rId = biletIds[Math.floor(Math.random() * biletIds.length)];
             updates[`users/${id}/stats/ticketId`] = rId;
         });
-        db.ref().update(updates).then(() => { alert("Biletlar muvaffaqiyatli tarqatildi!"); renderAdminUserStats(); });
+        db.ref().update(updates).then(() => { alert("Biletlar tarqatildi!"); });
     });
 }
 
 window.openBiletManager = function() { document.getElementById('biletManagerModal').style.display = 'flex'; renderAdminBilets(); }
 window.closeBiletManager = function() { document.getElementById('biletManagerModal').style.display = 'none'; }
-
 function renderAdminBilets() {
     const container = document.getElementById('biletsList');
     container.innerHTML = "";
-    Object.entries(defaultBiletlar).forEach(([id, questions]) => {
-        const biletCard = document.createElement('div');
-        biletCard.className = "card";
-        biletCard.style.background = "rgba(0,0,0,0.3)";
-        let qsHtml = "";
-        questions.forEach((q, qIdx) => {
-            qsHtml += `<div style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);"><input type="text" class="input-field b-q-text" data-bid="${id}" data-qidx="${qIdx}" value="${q.q}" placeholder="Savol..." style="width: 80%;"></div>`;
-        });
-        biletCard.innerHTML = `<h4>BILET #${id} (${questions.length} savol)</h4>${qsHtml}`;
-        container.appendChild(biletCard);
+    Object.entries(defaultBiletlar).forEach(([id, qs]) => {
+        const card = document.createElement('div');
+        card.className = "card"; card.style.background = "rgba(0,0,0,0.3)";
+        let h = ""; qs.forEach((q, i) => h += `<div style="padding:0.5rem;"><input type="text" class="input-field b-q-text" data-bid="${id}" data-qidx="${i}" value="${q.q}" style="width:100%;"></div>`);
+        card.innerHTML = `<h4>BILET #${id}</h4>${h}`; container.appendChild(card);
     });
 }
-
 window.saveBilets = function() {
     const newB = {};
     Object.keys(defaultBiletlar).forEach(bid => {
         newB[bid] = [];
-        document.querySelectorAll(`.b-q-text[data-bid="${bid}"]`).forEach((el, qIdx) => {
-            newB[bid].push({ q: el.value, a: defaultBiletlar[bid][qIdx].a, c: defaultBiletlar[bid][qIdx].c });
-        });
+        document.querySelectorAll(`.b-q-text[data-bid="${bid}"]`).forEach((el, i) => { newB[bid].push({ q: el.value, a: defaultBiletlar[bid][i].a, c: defaultBiletlar[bid][i].c }); });
     });
-    Object.assign(defaultBiletlar, newB);
-    localStorage.setItem('cyber_bilets', JSON.stringify(defaultBiletlar));
-    alert("Saqlandi!");
-    closeBiletManager();
+    Object.assign(defaultBiletlar, newB); localStorage.setItem('cyber_bilets', JSON.stringify(defaultBiletlar)); alert("Saqlandi!"); closeBiletManager();
 }
-
-window.exportToExcel = function() {
-    const table = document.getElementById("leaderboardTableMain");
-    const ws = XLSX.utils.table_to_sheet(table);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Natijalar");
-    XLSX.writeFile(wb, "Natijalar.xlsx");
-}
+window.exportToExcel = function() { const table = document.getElementById("leaderboardTableMain"); const ws = XLSX.utils.table_to_sheet(table); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Natijalar"); XLSX.writeFile(wb, "Natijalar.xlsx"); }
 
 function renderProfile() {
     document.getElementById('profileName').innerText = `${foydalanuvchi.firstName} ${foydalanuvchi.lastName}`;
@@ -529,7 +506,50 @@ function renderDashboard() {
         else if (d.v.includes('youtu.be/')) ytId = d.v.split('youtu.be/')[1].split('?')[0];
         const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg` : 'assets/img/video-placeholder.jpg';
         card.innerHTML = `<div class="lesson-thumb" style="background-image: url('${thumbUrl}')">${isLocked ? '<div class="lock-overlay">🔒</div>' : ''}</div><div class="lesson-info"><h3>${d.t}</h3><p class="status">${isLocked ? 'Qulflangan' : '✅ Ochiq'}</p></div>`;
-        if (!isLocked) card.onclick = () => { joriyDars = d; showPage('lessonPage'); document.getElementById('lessonTitle').innerText = d.t; document.getElementById('lessonVideo').src = d.v; };
+        if (!isLocked) card.onclick = () => { 
+            joriyDars = d; 
+            showPage('lessonPage'); 
+            document.getElementById('lessonTitle').innerText = d.t; 
+            document.getElementById('lessonVideo').src = d.v; 
+            document.getElementById('lessonExamBtn').style.display = 'block';
+        };
         grid.appendChild(card);
     });
+}
+
+window.startLessonTest = function() {
+    joriyTestTuri = 'lesson';
+    const container = document.getElementById('testContent');
+    const questions = defaultTestlar[joriyDars.id];
+    let html = "";
+    questions.forEach((q, i) => {
+        let opts = "";
+        q.a.forEach(opt => opts += `<label class="option-label"><input type="radio" name="q${i}" value="${opt}"> ${opt}</label>`);
+        html += `<div class="card" style="margin-bottom: 1.5rem;"><p>${i+1}. ${q.q}</p><div class="test-options">${opts}</div></div>`;
+    });
+    container.innerHTML = html;
+    showPage('testPage');
+}
+
+window.submitTest = function() {
+    const questions = defaultTestlar[joriyDars.id];
+    let correct = 0;
+    questions.forEach((q, i) => {
+        const sel = document.querySelector(`input[name="q${i}"]:checked`);
+        if (sel && sel.value === q.c) correct++;
+    });
+    const percent = Math.round((correct/questions.length)*100);
+    if (percent >= 60) {
+        const currentIdx = defaultDarslar.findIndex(d => d.id === joriyDars.id);
+        db.ref('users/' + foydalanuvchi.id + '/stats').update({ progress: Math.max(foydalanuvchi.stats.progress || 0, currentIdx + 1) });
+    }
+    renderResult(percent);
+}
+
+function renderResult(p) {
+    document.getElementById('resultPercent').innerText = p + "%";
+    document.getElementById('resultMsg').innerText = p >= 60 ? "Muvaffaqiyatli! Keyingi dars ochildi." : "Yana urinib ko'ring (Kamida 60% kerak)";
+    document.getElementById('resultActionBtn').innerText = "DAVOM ETISH";
+    document.getElementById('resultActionBtn').onclick = () => showPage('dashboardPage');
+    showPage('resultPage');
 }
