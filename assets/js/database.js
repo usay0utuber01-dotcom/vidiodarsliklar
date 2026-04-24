@@ -1,6 +1,6 @@
 /**
  * ==========================================
- * ACADEMY TEST - INITIAL DATABASE SEED
+ * VD AKADEMIYA - OFFICIAL COURSE DATABASE
  * ==========================================
  */
 
@@ -26,7 +26,7 @@ const initialVideos = [
 function generateQuestions(title) {
     return Array.from({ length: 10 }, (_, i) => ({
         id: i + 1,
-        q: `${title} bo'yicha ${i + 1}-savol: Ushbu darsda o'rganilgan asosiy tushuncha nima?`,
+        q: `${title} bo'yicha ${i + 1}-savol: Ushbu darsda o'rganilgan eng muhim jihat nima?`,
         a: ["To'g'ri javob", "Variant A", "Variant B", "Variant C"],
         c: "To'g'ri javob"
     }));

@@ -451,6 +451,10 @@ body {
     animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.page.active {
+    display: block; /* Sahifa faollashganda ko'rinishi uchun */
+}
+
 /* Landing Page Premium Layout - Fixed */
 .landing-container {
     display: flex;

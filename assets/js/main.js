@@ -108,7 +108,7 @@ window.app = {
             nav.style.display = 'none';
         } else {
             nav.style.display = 'block';
-            userInfo.innerText = state.isAdmin ? "ADMIN: XUJAQULOV" : `${state.user.firstName} ${state.user.lastName}`;
+            userInfo.innerText = state.isAdmin ? "ADMIN TIZIMI" : `${state.user.firstName} ${state.user.lastName}`;
         }
     },
 
@@ -199,13 +199,16 @@ window.app = {
     listenToGlobalData() {
         db.ref('videos').on('value', snap => {
             const val = snap.val();
-            if (!val && state.isAdmin) {
-                // Agar videolar bo'lmasa va admin bo'lsa, default darslarni yuklaymiz
-                const seedData = {};
-                defaultData.forEach(v => seedData[v.id] = v);
-                db.ref('videos').set(seedData);
+            if (!val) {
+                state.videos = defaultData;
+                if (state.isAdmin) {
+                    const seedData = {};
+                    defaultData.forEach(v => seedData[v.id] = v);
+                    db.ref('videos').set(seedData);
+                }
+            } else {
+                state.videos = Object.values(val);
             }
-            state.videos = val ? Object.values(val) : (state.isAdmin ? defaultData : []);
             if (state.activePage === 'page-student-dashboard') this.renderStudentDashboard();
             if (state.activePage === 'page-admin-dashboard') this.renderAdminVideoList();
         });
