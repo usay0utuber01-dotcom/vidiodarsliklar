@@ -36,7 +36,6 @@
         <section id="page-landing" class="page active">
             <div class="landing-container">
                 <div class="landing-content">
-                    <div class="badge-new">CYBER SECURITY & IT</div>
                     <h1>VD<span>AKADEMIYA</span></h1>
                     <p>Professional kurslar va bilimlar bellashuvi. <br> Kelajak kasblarini biz bilan o'rganing!</p>
                     <div class="main-buttons">
@@ -111,17 +110,24 @@
         <!-- 6. LESSON VIEW PAGE -->
         <section id="page-lesson-view" class="page">
             <button class="back-btn" onclick="app.showPage('page-student-dashboard')">← Kursga qaytish</button>
-            <div class="lesson-layout">
-                <div class="video-section">
+            <div class="lesson-single-layout">
+                <div class="video-main-section">
                     <h2 id="lesson-title">Dars sarlavhasi</h2>
                     <div class="video-wrapper">
                         <iframe id="lesson-iframe" src="" frameborder="0" allowfullscreen></iframe>
                     </div>
+                    <div class="lesson-actions" style="margin-top: 2rem; text-align: center;">
+                        <button class="btn btn-primary btn-lg" id="btn-start-lesson-test" onclick="app.startLessonTest()">IMTIHONNI BOSHLASH_</button>
+                    </div>
                 </div>
-                <div class="test-section" id="lesson-test-section">
-                    <h3>Dars yuzasidan test</h3>
-                    <div id="lesson-questions-container"></div>
-                    <button class="btn btn-primary w-100" onclick="app.submitLessonTest()">TESTNI YAKUNLASH_</button>
+                
+                <div id="lesson-test-overlay" class="test-overlay" style="display: none;">
+                    <div class="test-card">
+                        <button class="close-test" onclick="app.closeLessonTest()">×</button>
+                        <h3>Dars yuzasidan imtihon</h3>
+                        <div id="lesson-questions-container"></div>
+                        <button class="btn btn-primary w-100" onclick="app.submitLessonTest()" style="margin-top: 1.5rem;">JAVOBLARNI YUBORISH_</button>
+                    </div>
                 </div>
             </div>
         </section>

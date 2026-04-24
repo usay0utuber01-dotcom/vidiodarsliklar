@@ -216,7 +216,7 @@ window.app = {
             const certBox = document.createElement('div');
             certBox.className = 'cert-promo-card';
             certBox.innerHTML = `
-                <h3>TABRIKIMIZ! 🎓</h3>
+                <h3>TABRIKLAYMIZ! 🎓</h3>
                 <p>Siz kursni to'liq yakunladingiz va sertifikatga loyiq topildingiz.</p>
                 <button class="btn btn-primary" onclick="app.showCertificate()">SERTIFIKATNI OLISH</button>
             `;
@@ -231,8 +231,19 @@ window.app = {
         state.currentLesson = state.videos[idx];
         document.getElementById('lesson-title').innerText = state.currentLesson.title;
         document.getElementById('lesson-iframe').src = `https://www.youtube.com/embed/${state.currentLesson.vidId}?rel=0`;
-        this.renderLessonQuestions();
         this.showPage('page-lesson-view');
+        this.closeLessonTest(); // Reset test overlay
+    },
+
+    startLessonTest() {
+        this.renderLessonQuestions();
+        document.getElementById('lesson-test-overlay').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    },
+
+    closeLessonTest() {
+        document.getElementById('lesson-test-overlay').style.display = 'none';
+        document.body.style.overflow = 'auto';
     },
 
     renderLessonQuestions() {
@@ -267,7 +278,7 @@ window.app = {
         if (answered < questions.length) return alert("Barcha savollarga javob bering!");
 
         const percent = Math.round((correct / questions.length) * 100);
-        if (percent >= 70) {
+        if (percent >= 60) {
             const currentIdx = state.videos.findIndex(v => v.id === state.currentLesson.id);
             const nextProgress = Math.max(state.user.stats.progress, currentIdx + 1);
             
@@ -276,11 +287,12 @@ window.app = {
                 correct: (state.user.stats.correct || 0) + correct,
                 incorrect: (state.user.stats.incorrect || 0) + (questions.length - correct)
             }).then(() => {
-                alert(`Muvaffaqiyatli! ${percent}% natija bilan o'tdingiz.`);
+                alert(`Muvaffaqiyatli! ${percent}% natija bilan o'tdingiz. Keyingi dars ochildi!`);
+                this.closeLessonTest();
                 this.showPage('page-student-dashboard');
             });
         } else {
-            alert(`Natija: ${percent}%. O'tish balli: 70%. Iltimos, videoni qayta ko'rib chiqib, qaytadan urinib ko'ring.`);
+            alert(`Natija: ${percent}%. O'tish balli: 60%. Iltimos, videoni qayta ko'rib chiqib, qaytadan urinib ko'ring.`);
         }
     },
 
@@ -342,7 +354,7 @@ window.app = {
     switchAdminTab(tab) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
-        event.target.classList.add('active');
+        if (event) event.target.classList.add('active');
         document.getElementById('tab-' + tab).classList.add('active');
         if (tab === 'results') this.renderResults();
     },
