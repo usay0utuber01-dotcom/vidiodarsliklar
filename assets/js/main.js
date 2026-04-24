@@ -17,15 +17,25 @@ const firebaseConfig = {
 };
 
 let db;
+const listeners = [];
+const triggerListeners = () => {
+    const data = JSON.parse(localStorage.getItem('vd_mock_db') || '{}');
+    listeners.forEach(l => {
+        const parts = l.path.split('/').filter(p => p);
+        let target = data;
+        for (const p of parts) target = target[p] || {};
+        const val = (Object.keys(target).length === 0 && l.partsLength > 0 ? null : target);
+        l.cb({ val: () => val });
+    });
+};
+
 if (firebaseConfig.apiKey === "YOUR_API_KEY") {
     db = {
         ref: (path = "") => ({
             on: (event, cb) => {
-                const data = JSON.parse(localStorage.getItem('vd_mock_db') || '{}');
                 const parts = path.split('/').filter(p => p);
-                let target = data;
-                for (const p of parts) target = target[p] || {};
-                cb({ val: () => (Object.keys(target).length === 0 && event === 'value' && parts.length > 0 ? null : target) });
+                listeners.push({ path, cb, partsLength: parts.length });
+                triggerListeners();
             },
             once: (event, cb) => {
                 const data = JSON.parse(localStorage.getItem('vd_mock_db') || '{}');
@@ -44,6 +54,7 @@ if (firebaseConfig.apiKey === "YOUR_API_KEY") {
                 }
                 curr[parts[parts.length - 1]] = val;
                 localStorage.setItem('vd_mock_db', JSON.stringify(data));
+                triggerListeners();
                 return Promise.resolve();
             },
             update: (val) => {
@@ -53,6 +64,7 @@ if (firebaseConfig.apiKey === "YOUR_API_KEY") {
                 for (const p of parts) curr = curr[p] || (curr[p] = {});
                 Object.assign(curr, val);
                 localStorage.setItem('vd_mock_db', JSON.stringify(data));
+                triggerListeners();
                 return Promise.resolve();
             },
             remove: () => {
@@ -62,6 +74,7 @@ if (firebaseConfig.apiKey === "YOUR_API_KEY") {
                 for (let i = 0; i < parts.length - 1; i++) curr = curr[parts[i]];
                 delete curr[parts[parts.length - 1]];
                 localStorage.setItem('vd_mock_db', JSON.stringify(data));
+                triggerListeners();
                 return Promise.resolve();
             }
         })
@@ -110,6 +123,7 @@ window.app = {
     updateNav() {
         const nav = document.getElementById('main-nav');
         const userInfo = document.getElementById('nav-user-info');
+        if (!nav) return;
         if (state.activePage === 'page-landing' || state.activePage.includes('login') || state.activePage === 'page-register') {
             nav.style.display = 'none';
         } else {
@@ -118,25 +132,34 @@ window.app = {
         }
     },
 
+    // --- Helpers ---
+    extractVidId(url) {
+        if (!url) return "";
+        if (url.length === 11) return url; // Already an ID
+        const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : url;
+    },
+
     // --- Auth ---
     register() {
         const f = document.getElementById('reg-firstname').value.trim();
         const l = document.getElementById('reg-lastname').value.trim();
-        if (!f || !l) return alert("Iltimos, ism va familiyangizni kiriting!");
-        const username = (f + "_" + l).toLowerCase().replace(/\s+/g, '') + "_" + Math.floor(1000 + Math.random() * 8999);
-        db.ref('users/' + username).set({
-            firstName: f, lastName: l, username: username,
+        if (!f || !l) return alert("To'ldiring!");
+        const u = (f + "_" + l).toLowerCase().replace(/\s+/g, '') + "_" + Math.floor(1000 + Math.random() * 8999);
+        db.ref('users/' + u).set({
+            firstName: f, lastName: l, username: u,
             stats: { progress: 0, correct: 0, incorrect: 0, score: 0 }
         }).then(() => {
-            alert("Muvaffaqiyatli ro'yxatdan o'tdingiz!\nSizning login: " + username + "\nUni saqlab qoling!");
-            document.getElementById('login-username').value = username;
+            alert("Login: " + u);
+            document.getElementById('login-username').value = u;
             this.showPage('page-student-login');
         });
     },
 
     studentLogin() {
         const u = document.getElementById('login-username').value.trim();
-        if (!u) return alert("Loginni kiriting!");
+        if (!u) return alert("Login!");
         db.ref('users/' + u).once('value', snap => {
             const data = snap.val();
             if (data) {
@@ -144,8 +167,9 @@ window.app = {
                 state.isAdmin = false;
                 localStorage.setItem('vd_session', JSON.stringify(data));
                 localStorage.setItem('vd_is_admin', 'false');
+                this.syncUser();
                 this.showPage('page-student-dashboard');
-            } else alert("Xato! Bunday login topilmadi.");
+            } else alert("Xato!");
         });
     },
 
@@ -158,14 +182,12 @@ window.app = {
             localStorage.setItem('vd_session', JSON.stringify(state.user));
             localStorage.setItem('vd_is_admin', 'true');
             this.showPage('page-admin-dashboard');
-        } else alert("Login yoki parol xato!");
+        } else alert("Xato!");
     },
 
     logout() {
         localStorage.removeItem('vd_session');
         localStorage.removeItem('vd_is_admin');
-        state.user = null;
-        state.isAdmin = false;
         location.reload();
     },
 
@@ -182,7 +204,7 @@ window.app = {
         });
     },
 
-    // --- Video/Lesson Management ---
+    // --- Content Management ---
     listenToGlobalVideos() {
         db.ref('videos').on('value', snap => {
             const val = snap.val();
@@ -204,7 +226,7 @@ window.app = {
     renderStudentDashboard() {
         const grid = document.getElementById('video-grid');
         if (!grid) return;
-        const userProgress = state.user.stats?.progress || 0;
+        const userProgress = state.user?.stats?.progress || 0;
         grid.innerHTML = state.videos.map((v, i) => {
             const isLocked = i > userProgress;
             const isCompleted = i < userProgress;
@@ -223,12 +245,11 @@ window.app = {
         if (userProgress >= state.videos.length && state.videos.length > 0) {
             const certBox = document.createElement('div');
             certBox.className = 'cert-promo-card';
-            certBox.innerHTML = `<h3>TABRIKLAYMIZ! 🎓</h3><p>Siz kursni to'liq yakunladingiz.</p><button class="btn btn-primary" onclick="app.showCertificate()">SERTIFIKATNI OLISH</button>`;
+            certBox.innerHTML = `<h3>TABRIKLAYMIZ! 🎓</h3><p>Sertifikatga loyiq topildingiz.</p><button class="btn btn-primary" onclick="app.showCertificate()">SERTIFIKATNI OLISH</button>`;
             grid.prepend(certBox);
         }
     },
 
-    // --- Admin Functions ---
     renderAdminDashboard() {
         const list = document.getElementById('admin-video-list');
         if (!list) return;
@@ -267,29 +288,31 @@ window.app = {
 
     saveVideo() {
         const title = document.getElementById('edit-vid-title').value.trim();
-        const vidId = document.getElementById('edit-vid-id').value.trim();
-        if (!title || !vidId) return alert("Hamma maydonlarni to'ldiring!");
+        const rawVid = document.getElementById('edit-vid-id').value.trim();
+        if (!title || !rawVid) return alert("To'ldiring!");
+
+        const vidId = this.extractVidId(rawVid);
 
         if (state.editingVideoId) {
             db.ref('videos/' + state.editingVideoId).update({ title, vidId }).then(() => {
-                alert("Dars yangilandi!"); this.closeModal('modal-video');
+                alert("Yangilandi!"); this.closeModal('modal-video');
             });
         } else {
             const id = Date.now();
             const questions = Array.from({length: 10}, (_, i) => ({
-                q: `${title} mavzusi bo'yicha ${i+1}-savol?`,
-                a: ["Javob A", "Javob B", "Javob C", "Javob D"],
-                c: "Javob A"
+                q: `${title} bo'yicha ${i+1}-savol?`,
+                a: ["Variant A", "Variant B", "Variant C", "Variant D"],
+                c: "Variant A"
             }));
             db.ref('videos/' + id).set({ id, title, vidId, questions }).then(() => {
-                alert("Yangi dars qo'shildi!"); this.closeModal('modal-video');
+                alert("Qo'shildi!"); this.closeModal('modal-video');
             });
         }
     },
 
     deleteVideo(id) {
-        if (confirm("Ushbu darsni o'chirmoqchimisiz?")) {
-            db.ref('videos/' + id).remove().then(() => alert("Dars o'chirildi!"));
+        if (confirm("O'chirilsinmi?")) {
+            db.ref('videos/' + id).remove().then(() => alert("O'chirildi!"));
         }
     },
 
@@ -297,17 +320,14 @@ window.app = {
         state.editingVideoId = id;
         const v = state.videos.find(v => v.id === id);
         const container = document.getElementById('test-editor-container');
-        container.innerHTML = v.questions.map((q, i) => `
-            <div class="test-edit-block" data-idx="${i}">
-                <div class="input-group">
-                    <label>${i+1}-savol matni</label>
-                    <input type="text" class="edit-q-text" value="${q.q}">
-                </div>
+        container.innerHTML = (v.questions || []).map((q, i) => `
+            <div class="test-edit-block">
+                <div class="input-group"><label>${i+1}-savol</label><input type="text" class="edit-q-text" value="${q.q}"></div>
                 <div class="edit-options-grid">
                     ${q.a.map((opt, j) => `
                         <div class="opt-edit">
                             <input type="text" class="edit-opt-text" value="${opt}">
-                            <input type="radio" name="correct-${i}" value="${j}" ${opt === q.c ? 'checked' : ''}> To'g'ri
+                            <input type="radio" name="correct-${i}" value="${j}" ${opt === q.c ? 'checked' : ''}>
                         </div>
                     `).join('')}
                 </div>
@@ -323,32 +343,33 @@ window.app = {
             const q = block.querySelector('.edit-q-text').value;
             const opts = [];
             block.querySelectorAll('.edit-opt-text').forEach(opt => opts.push(opt.value));
-            const correctIdx = block.querySelector('input[type="radio"]:checked').value;
+            const correctRadio = block.querySelector('input[type="radio"]:checked');
+            const correctIdx = correctRadio ? correctRadio.value : 0;
             questions.push({ q, a: opts, c: opts[correctIdx] });
         });
         db.ref('videos/' + id + '/questions').set(questions).then(() => {
-            alert("Testlar saqlandi!"); this.closeModal('modal-test-editor');
+            alert("Saqlandi!"); this.closeModal('modal-test-editor');
         });
     },
 
-    // --- Common UI ---
+    // --- UI Helpers ---
     openModal(id) { document.getElementById(id).style.display = 'flex'; document.body.style.overflow = 'hidden'; },
     closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = 'auto'; },
 
-    // --- Student Test ---
+    // --- Student Flow ---
     openLesson(idx) {
-        const userProgress = state.user.stats?.progress || 0;
+        const userProgress = state.user?.stats?.progress || 0;
         if (idx > userProgress) return alert("Avvalgi darslarni yakunlang!");
         state.currentLesson = state.videos[idx];
         document.getElementById('lesson-title').innerText = state.currentLesson.title;
         document.getElementById('lesson-iframe').src = `https://www.youtube.com/embed/${state.currentLesson.vidId}?rel=0`;
         this.showPage('page-lesson-view');
-        this.closeLessonTest();
+        this.closeModal('lesson-test-overlay');
     },
 
     startLessonTest() {
         const container = document.getElementById('lesson-questions-container');
-        container.innerHTML = state.currentLesson.questions.map((q, i) => `
+        container.innerHTML = (state.currentLesson.questions || []).map((q, i) => `
             <div class="question-block">
                 <p><strong>${i+1}. ${q.q}</strong></p>
                 <div class="options">
@@ -359,10 +380,8 @@ window.app = {
         this.openModal('lesson-test-overlay');
     },
 
-    closeLessonTest() { this.closeModal('lesson-test-overlay'); },
-
     submitLessonTest() {
-        const questions = state.currentLesson.questions;
+        const questions = state.currentLesson.questions || [];
         let correct = 0; let answered = 0;
         questions.forEach((q, i) => {
             const sel = document.querySelector(`input[name="lq-${i}"]:checked`);
@@ -373,12 +392,10 @@ window.app = {
         if (percent >= 60) {
             const currentIdx = state.videos.findIndex(v => v.id === state.currentLesson.id);
             const nextProgress = Math.max(state.user.stats.progress, currentIdx + 1);
-            db.ref('users/' + state.user.username + '/stats').update({ 
-                progress: nextProgress,
-                correct: (state.user.stats.correct || 0) + correct,
-                incorrect: (state.user.stats.incorrect || 0) + (questions.length - correct)
-            }).then(() => { alert(`Muvaffaqiyatli! ${percent}% natija! Keyingi dars ochildi.`); this.closeLessonTest(); this.showPage('page-student-dashboard'); });
-        } else alert(`Natija: ${percent}%. O'tish balli: 60%. Iltimos, qaytadan urinib ko'ring.`);
+            db.ref('users/' + state.user.username + '/stats').update({ progress: nextProgress }).then(() => { 
+                alert("Muvaffaqiyatli!"); this.closeModal('lesson-test-overlay'); this.showPage('page-student-dashboard'); 
+            });
+        } else alert(`Natija: ${percent}%. O'tish: 60%.`);
     },
 
     showCertificate() {
@@ -391,8 +408,7 @@ window.app = {
         const element = document.getElementById('certificate-template');
         html2canvas(element, { scale: 2 }).then(canvas => {
             const link = document.createElement('a');
-            link.download = `Sertifikat_${state.user.firstName}_${state.user.lastName}.png`;
-            link.href = canvas.toDataURL(); link.click();
+            link.download = `Sertifikat.png`; link.href = canvas.toDataURL(); link.click();
         });
     },
 
@@ -400,40 +416,16 @@ window.app = {
         db.ref('competition').on('value', snap => {
             state.comp = snap.val() || { isStarted: false };
             const box = document.getElementById('comp-status-box');
-            if (!box) return;
-            if (state.comp.isStarted) { box.innerText = "BELLASHUV BOSHLANDI!"; box.style.background = "#ef4444"; }
-            else { box.innerText = "Bellashuv kutilmoqda..."; box.style.background = "#00d2ff"; }
+            if (box) box.innerText = state.comp.isStarted ? "BELLASHUV BOSHLANDI!" : "Bellashuv kutilmoqda...";
         });
     },
 
     switchAdminTab(tab) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
-        if (event && event.target) event.target.classList.add('active');
+        if (event && event.target && event.target.classList) event.target.classList.add('active');
         document.getElementById('tab-' + tab).classList.add('active');
         if (tab === 'results') this.renderResults();
-    },
-
-    renderResults() {
-        db.ref('users').once('value', snap => {
-            const users = Object.values(snap.val() || {}).sort((a,b) => (b.stats.progress - a.stats.progress));
-            document.getElementById('results-body').innerHTML = users.map((u, i) => `
-                <tr><td>${i+1}</td><td><strong>${u.firstName} ${u.lastName}</strong></td><td>${u.stats.progress} / ${state.videos.length}</td><td>${u.stats.score || 0}</td><td><span style="color: ${u.stats.progress >= state.videos.length ? '#10b981' : '#f59e0b'}">${u.stats.progress >= state.videos.length ? 'TUGATGAN' : 'O\'QIMOQDA'}</span></td></tr>
-            `).join('');
-        });
-    },
-
-    toggleCompetition(start) {
-        db.ref('competition').set({ isStarted: start, startTime: Date.now() });
-        document.getElementById('btn-start-comp').style.display = start ? 'none' : 'inline-block';
-        document.getElementById('btn-stop-comp').style.display = start ? 'inline-block' : 'none';
-    },
-
-    exportExcel() {
-        db.ref('users').once('value', snap => {
-            const data = Object.values(snap.val() || {}).map(u => ({ Ism: u.firstName, Familiya: u.lastName, Darslar: u.stats.progress, Xatolar: u.stats.incorrect || 0, Ball: u.stats.score || 0 }));
-            const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Akademiya_Natijalar"); XLSX.writeFile(wb, "Natijalar.xlsx");
-        });
     }
 };
 
