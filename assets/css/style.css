@@ -882,6 +882,7 @@ select.input-field {
 }
 
 
+
 /* 
   =========================================
   RESPONSIVE DESIGN (MOBILE & TABLET)
@@ -894,9 +895,32 @@ select.input-field {
     }
 }
 
+@media (max-width: 768px) {
+    .navbar {
+        padding: 1rem !important;
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+        height: auto !important;
+    }
+
+    .nav-links {
+        display: flex !important;
+        gap: 0.8rem !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+    }
+
+    .nav-item {
+        font-size: 0.6rem !important;
+        padding: 0.2rem 0 !important;
+    }
+
+    .container {
+        padding-top: 130px !important;
+    }
 
     .logo-big {
-        font-size: 3rem;
+        font-size: 2.5rem;
         text-align: center;
     }
 
@@ -925,7 +949,7 @@ select.input-field {
 
     .old-input, .old-btn, .auth-tabs {
         width: 100% !important;
-        max-width: 100% !important;
+        max-width: 400px !important;
     }
 
     .lesson-grid {
@@ -961,6 +985,18 @@ select.input-field {
         max-height: 95vh;
     }
 
+    /* Leaderboard Fixes */
+    #adminLeaderboard .card:first-child {
+        flex-direction: column !important;
+        text-align: center;
+        gap: 1.5rem;
+    }
+
+    #adminLeaderboard .card:first-child div[style*="display: flex; gap: 1rem;"] {
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+
     .cert-preview {
         padding: 20px;
         border-width: 8px;
@@ -971,8 +1007,11 @@ select.input-field {
 
     .cert-title { font-size: 2rem; }
     .cert-name { font-size: 1.8rem; }
+}
+
+@media (max-width: 480px) {
     .logo-big {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
     }
 
     .card {
@@ -985,7 +1024,7 @@ select.input-field {
     }
 
     .premium-timer {
-        font-size: 1rem;
-        padding: 0.3rem 0.6rem;
+        font-size: 0.9rem;
+        padding: 0.3rem 0.5rem;
     }
 }
