@@ -19,7 +19,22 @@ const firebaseConfig = {
 let db;
 if (firebaseConfig.apiKey === "YOUR_API_KEY") {
     // Improved Mock DB for Local Testing
-    const getMockData = () => JSON.parse(localStorage.getItem('cyber_mock_db') || '{}');
+    const getMockData = () => {
+        let data = JSON.parse(localStorage.getItem('cyber_mock_db') || '{}');
+        if (Object.keys(data).length === 0) {
+            // Initial Sample Data
+            data = {
+                users: {
+                    "ali_valiyev": { firstName: "Ali", lastName: "Valiyev", pin: "1111", stats: { correct: 15, incorrect: 2, progress: 5, ticketId: 1, lastSeen: "24.04.2026, 15:30" } },
+                    "nozim_hakimov": { firstName: "Nozim", lastName: "Hakimov", pin: "2222", stats: { correct: 8, incorrect: 5, progress: 3, ticketId: 2, lastSeen: "24.04.2026, 15:45" } },
+                    "dilshod_asqarov": { firstName: "Dilshod", lastName: "Asqarov", pin: "3333", stats: { correct: 20, incorrect: 0, progress: 10, ticketId: 3, lastSeen: "24.04.2026, 16:00" } }
+                },
+                competition: { isActive: false, code: "0000", isStarted: false }
+            };
+            localStorage.setItem('cyber_mock_db', JSON.stringify(data));
+        }
+        return data;
+    };
     const saveMockData = (data) => localStorage.setItem('cyber_mock_db', JSON.stringify(data));
 
     db = {
@@ -105,18 +120,7 @@ if (savedBilets) {
 function init() {
     setupEventListeners();
     
-    const savedAdmin = localStorage.getItem('vd_admin') === 'true';
-    const savedPage = localStorage.getItem('cyber_active_page');
 
-    if (savedAdmin) {
-        isAdmin = true;
-        showPage(savedPage || 'adminDashboardPage');
-    } else if (foydalanuvchi) {
-        syncUserSession();
-        showPage(savedPage || 'dashboardPage');
-    } else {
-        showPage('loginPage');
-    }
     
     // Listen for global competition status
     db.ref('competition').on('value', (snapshot) => {

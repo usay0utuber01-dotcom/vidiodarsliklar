@@ -266,7 +266,9 @@
             <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 3rem;">
                 <div>
                     <h1 style="color: var(--primary); font-size: 2.5rem; letter-spacing: 2px; margin: 0;">BOSHQARUV PANELI</h1>
-                    <p style="color: var(--text-dim); margin-top: 0.5rem; letter-spacing: 1px;">Xush kelibsiz, <strong style="color: #fff;">XO'JAQULOV ANVAR</strong></p>
+                    <p style="color: var(--text-dim); margin-top: 0.5rem; letter-spacing: 1px;">Xush kelibsiz, <strong style="color: #fff;">XO'JAQULOV ANVAR</strong> 
+                        <span id="demoBadge" style="display:none; background: var(--accent); color: #fff; font-size: 0.6rem; padding: 2px 8px; border-radius: 4px; margin-left: 10px; vertical-align: middle;">DEMO REJIM</span>
+                    </p>
                 </div>
                 <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                     <button class="btn btn-outline" onclick="toggleAdminView('modules')">DARSLAR</button>
@@ -278,15 +280,22 @@
                 </div>
             </div>
 
-            <div id="adminModulesList" class="admin-view-section">
-                <!-- Modules Table will be here -->
-            </div>
+            <div id="adminModulesList" class="admin-view-section"></div>
 
             <div id="adminUsersList" class="admin-view-section" style="display:none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="color: var(--secondary); margin: 0;">RO'YXATDAN O'TGANLAR</h3>
+                    <button class="btn btn-outline" onclick="renderAdminUserStats()" style="font-size: 0.7rem; padding: 8px 15px;">YANGILASH 🔄</button>
+                </div>
                 <div class="card" style="padding: 0; overflow: hidden;">
                     <table class="admin-table">
                         <thead>
-                            <tr><th>FOYDALANUVCHI</th><th>BILET #</th><th>DARS KO'RILDI</th><th>TESTLAR</th><th>AMAL</th>
+                            <tr>
+                                <th>FOYDALANUVCHI</th>
+                                <th>BILET #</th>
+                                <th>DARS KO'RILDI</th>
+                                <th>TESTLAR</th>
+                                <th style="text-align: center;">AMAL</th>
                             </tr>
                         </thead>
                         <tbody id="userStatsBody"></tbody>
@@ -310,18 +319,16 @@
                 <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--gold);">
                     <table class="admin-table leaderboard-table" id="leaderboardTableMain">
                         <thead>
-                            <tr><th>FOYDALANUVCHI</th><th>BILET #</th><th>DARS KO'RILDI</th><th>TESTLAR</th><th>AMAL</th>
-                                <th style="width: 50px;">O'RIN</th>
-                                <th>FOYDALANUVCHI</th><th>BILET #</th>
+                            <tr>
+                                <th>#</th>
+                                <th>FOYDALANUVCHI</th>
                                 <th>BILET #</th>
                                 <th>TO'G'RI</th>
                                 <th>XATO</th>
                                 <th>VAQT</th>
                             </tr>
                         </thead>
-                        <tbody id="leaderboardBody">
-                            <!-- Real-time data will be here -->
-                        </tbody>
+                        <tbody id="leaderboardBody"></tbody>
                     </table>
                 </div>
             </div>
