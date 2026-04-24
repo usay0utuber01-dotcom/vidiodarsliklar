@@ -101,23 +101,31 @@ if (firebaseConfig.apiKey === "YOUR_API_KEY") {
 
 const state = {
     user: JSON.parse(localStorage.getItem('vd_session')) || null,
-    isAdmin: localStorage.getItem('vd_is_admin') === 'true',
-    videos: defaultData, // Using hardcoded data as primary source
+    videos: defaultData,
     activePage: 'page-landing',
-    currentLesson: null
+    currentLesson: null,
+    competition: null,
+    compTimer: null
 };
 
 window.app = {
     init() {
         if (state.user) {
             this.syncUser();
-            this.showPage(state.isAdmin ? 'page-admin-dashboard' : 'page-student-dashboard');
+            this.showPage('page-student-dashboard');
+            this.listenToCompetition();
         } else {
             this.showPage('page-landing');
         }
     },
 
     showPage(id) {
+        // Stop video audio if leaving lesson view
+        if (state.activePage === 'page-lesson-view' && id !== 'page-lesson-view') {
+            const iframe = document.getElementById('lesson-iframe');
+            if (iframe) iframe.src = "";
+        }
+
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         const target = document.getElementById(id);
         if (target) {
@@ -125,21 +133,16 @@ window.app = {
             state.activePage = id;
             this.updateNav();
             if (id === 'page-student-dashboard') this.renderStudentDashboard();
-            if (id === 'page-admin-dashboard') this.renderResults();
         }
         window.scrollTo(0, 0);
     },
 
     updateNav() {
         const nav = document.getElementById('main-nav');
-        const userInfo = document.getElementById('nav-user-info');
         if (!nav) return;
-        if (state.activePage === 'page-landing' || state.activePage.includes('login') || state.activePage === 'page-register') {
-            nav.style.display = 'none';
-        } else {
-            nav.style.display = 'block';
-            userInfo.innerText = state.isAdmin ? "ADMIN" : (state.user ? `${state.user.firstName} ${state.user.lastName}` : "");
-        }
+        nav.style.display = (state.activePage === 'page-landing' || state.activePage.includes('login') || state.activePage === 'page-register') ? 'none' : 'block';
+        const ui = document.getElementById('nav-user-info');
+        if (ui) ui.innerText = state.user ? `${state.user.firstName} ${state.user.lastName}` : "";
     },
 
     register() {
@@ -159,35 +162,21 @@ window.app = {
 
     studentLogin() {
         const u = document.getElementById('login-username').value.trim();
-        if (!u) return alert("Login!");
+        if (!u) return alert("Loginni kiriting!");
         db.ref('users/' + u).once('value', snap => {
             const data = snap.val();
             if (data) {
                 state.user = data;
-                state.isAdmin = false;
                 localStorage.setItem('vd_session', JSON.stringify(data));
-                localStorage.setItem('vd_is_admin', 'false');
                 this.syncUser();
+                this.listenToCompetition();
                 this.showPage('page-student-dashboard');
             } else alert("Xato!");
         });
     },
 
-    adminLogin() {
-        const u = document.getElementById('admin-user').value;
-        const p = document.getElementById('admin-pass').value;
-        if (u === 'xujaqulov01' && p === 'admin777') {
-            state.isAdmin = true;
-            state.user = { firstName: "Admin", lastName: "" };
-            localStorage.setItem('vd_session', JSON.stringify(state.user));
-            localStorage.setItem('vd_is_admin', 'true');
-            this.showPage('page-admin-dashboard');
-        } else alert("Xato!");
-    },
-
     logout() {
         localStorage.removeItem('vd_session');
-        localStorage.removeItem('vd_is_admin');
         location.reload();
     },
 
@@ -205,9 +194,12 @@ window.app = {
 
     renderStudentDashboard() {
         const grid = document.getElementById('video-grid');
+        const greeting = document.getElementById('welcome-greeting');
+        if (greeting && state.user) {
+            greeting.innerText = `Xush kelibsiz, ${state.user.firstName} ${state.user.lastName}!`;
+        }
         if (!grid) return;
         const userProgress = state.user?.stats?.progress || 0;
-        
         grid.innerHTML = state.videos.map((v, i) => {
             const isLocked = i > userProgress;
             const isCompleted = i < userProgress;
@@ -218,14 +210,10 @@ window.app = {
                         ${isLocked ? '<div class="lock-overlay">🔒</div>' : ''}
                         ${isCompleted ? '<div class="check-overlay">✅</div>' : ''}
                     </div>
-                    <div class="card-info">
-                        <h3>${v.title}</h3>
-                        <p>${isLocked ? 'Qulflangan' : (isCompleted ? 'Tugatildi' : 'Hozirgi dars')}</p>
-                    </div>
+                    <div class="card-info"><h3>${v.title}</h3><p>${isLocked ? 'Qulflangan' : (isCompleted ? 'Tugatildi' : 'Hozirgi dars')}</p></div>
                 </div>
             `;
         }).join('');
-
         if (userProgress >= state.videos.length && state.videos.length > 0) {
             const certBox = document.createElement('div');
             certBox.className = 'cert-promo-card';
@@ -234,56 +222,71 @@ window.app = {
         }
     },
 
-    renderResults() {
-        const body = document.getElementById('results-body');
-        if (!body) return;
-        db.ref('users').once('value', snap => {
-            const users = Object.values(snap.val() || {}).sort((a,b) => (b.stats.progress - a.stats.progress));
-            body.innerHTML = users.map((u, i) => `
-                <tr>
-                    <td>${i+1}</td>
-                    <td><strong>${u.firstName} ${u.lastName}</strong></td>
-                    <td>${u.stats.progress} / ${state.videos.length}</td>
-                    <td>${u.stats.incorrect || 0}</td>
-                    <td><span style="color: ${u.stats.progress >= state.videos.length ? '#10b981' : '#f59e0b'}">
-                        ${u.stats.progress >= state.videos.length ? 'TUGATGAN' : 'O\'QIMOQDA'}</span>
-                    </td>
-                </tr>
-            `).join('');
+    listenToCompetition() {
+        db.ref('competition').on('value', snap => {
+            const comp = snap.val();
+            if (comp && comp.isActive && state.activePage !== 'page-student-comp') {
+                state.competition = comp;
+                this.openStudentCompExam();
+            } else if (!comp && state.activePage === 'page-student-comp') {
+                alert("Musobaqa yakunlandi!");
+                this.showPage('page-student-dashboard');
+            }
         });
     },
 
-    exportExcel() {
-        db.ref('users').once('value', snap => {
-            const data = Object.values(snap.val() || {}).map(u => ({ Ism: u.firstName, Familiya: u.lastName, Darslar: u.stats.progress, Xatolar: u.stats.incorrect || 0 }));
-            const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Natijalar"); XLSX.writeFile(wb, "Reyting.xlsx");
+    openStudentCompExam() {
+        this.showPage('page-student-comp');
+        document.getElementById('comp-questions-container').innerHTML = state.competition.questions.map((q, i) => `
+            <div class="question-block">
+                <p><strong>${i+1}. ${q.q}</strong></p>
+                <div class="options">${q.a.map(opt => `<label class="opt-label"><input type="radio" name="cq-${i}" value="${opt}"> ${opt}</label>`).join('')}</div>
+            </div>
+        `).join('');
+        if (state.compTimer) clearInterval(state.compTimer);
+        state.compTimer = setInterval(() => {
+            const left = Math.max(0, state.competition.endTime - Date.now());
+            const m = Math.floor(left / 60000); const s = Math.floor((left % 60000) / 1000);
+            document.getElementById('comp-timer').innerText = `${m}:${s < 10 ? '0'+s : s}`;
+            if (left <= 0) { clearInterval(state.compTimer); this.submitCompTest(true); }
+        }, 1000);
+    },
+
+    submitCompTest(isAuto = false) {
+        const questions = state.competition.questions;
+        let correct = 0; let answered = 0;
+        questions.forEach((q, i) => {
+            const sel = document.querySelector(`input[name="cq-${i}"]:checked`);
+            if (sel) { answered++; if (sel.value === q.c) correct++; }
+        });
+        if (!isAuto && answered < questions.length) return alert("Hamma savollarni belgilang!");
+        const res = { username: state.user.username, name: `${state.user.firstName} ${state.user.lastName}`, score: correct, total: questions.length, timestamp: Date.now() };
+        db.ref('competition_results/' + state.user.username).set(res).then(() => {
+            alert("Natijangiz yuborildi!"); clearInterval(state.compTimer); this.showPage('page-student-dashboard');
         });
     },
 
     openLesson(idx) {
-        const userProgress = state.user?.stats?.progress || 0;
-        if (idx > userProgress) return alert("Avvalgi darsni tugatgan bo'lishingiz shart!");
+        if (idx > (state.user?.stats?.progress || 0)) return alert("Avvalgi darsni tugating!");
         state.currentLesson = state.videos[idx];
         document.getElementById('lesson-title').innerText = state.currentLesson.title;
         document.getElementById('lesson-iframe').src = `https://www.youtube.com/embed/${state.currentLesson.vidId}?rel=0`;
         this.showPage('page-lesson-view');
-        this.closeModal('lesson-test-overlay');
     },
 
     startLessonTest() {
-        const container = document.getElementById('lesson-questions-container');
-        container.innerHTML = (state.currentLesson.questions || []).map((q, i) => `
+        // Stop video audio when starting test
+        const iframe = document.getElementById('lesson-iframe');
+        if (iframe) iframe.src = "";
+
+        document.getElementById('lesson-questions-container').innerHTML = (state.currentLesson.questions || []).map((q, i) => `
             <div class="question-block">
                 <p><strong>${i+1}. ${q.q}</strong></p>
-                <div class="options">
-                    ${q.a.map(opt => `<label class="opt-label"><input type="radio" name="lq-${i}" value="${opt}"> ${opt}</label>`).join('')}
-                </div>
+                <div class="options">${q.a.map(opt => `<label class="opt-label"><input type="radio" name="lq-${i}" value="${opt}"> ${opt}</label>`).join('')}</div>
             </div>
         `).join('');
         this.openModal('lesson-test-overlay');
     },
-
-    closeLessonTest() { this.closeModal('lesson-test-overlay'); },
 
     submitLessonTest() {
         const questions = state.currentLesson.questions || [];
@@ -292,15 +295,13 @@ window.app = {
             const sel = document.querySelector(`input[name="lq-${i}"]:checked`);
             if (sel) { answered++; if (sel.value === q.c) correct++; }
         });
-        if (answered < questions.length) return alert("Barcha savollarga javob bering!");
-        const percent = Math.round((correct / questions.length) * 100);
-        if (percent >= 60) {
-            const currentIdx = state.videos.findIndex(v => v.id === state.currentLesson.id);
-            const nextProgress = Math.max(state.user.stats.progress, currentIdx + 1);
-            db.ref('users/' + state.user.username + '/stats').update({ progress: nextProgress }).then(() => { 
-                alert("Tabriklaymiz! Keyingi dars ochildi."); this.closeModal('lesson-test-overlay'); this.showPage('page-student-dashboard'); 
+        if (answered < questions.length) return alert("To'ldiring!");
+        if ((correct / questions.length) >= 0.6) {
+            const curIdx = state.videos.findIndex(v => v.id === state.currentLesson.id);
+            db.ref('users/' + state.user.username + '/stats').update({ progress: Math.max(state.user.stats.progress, curIdx + 1) }).then(() => { 
+                alert("O'tdingiz!"); this.closeLessonTest(); this.showPage('page-student-dashboard'); 
             });
-        } else alert(`Natija: ${percent}%. O'tish bali: 60%. Qaytadan urinib ko'ring.`);
+        } else alert("Yana urinib ko'ring.");
     },
 
     showCertificate() {
@@ -310,17 +311,14 @@ window.app = {
     },
 
     downloadCertificate() {
-        const element = document.getElementById('certificate-template');
-        html2canvas(element, { scale: 2 }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = `Sertifikat.png`; link.href = canvas.toDataURL(); link.click();
+        html2canvas(document.getElementById('certificate-template'), { scale: 2 }).then(canvas => {
+            const link = document.createElement('a'); link.download = `Sertifikat.png`; link.href = canvas.toDataURL(); link.click();
         });
     },
 
     openModal(id) { document.getElementById(id).style.display = 'flex'; document.body.style.overflow = 'hidden'; },
     closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = 'auto'; },
-    listenToData() {}, 
-    switchAdminTab(tab) {}
+    closeLessonTest() { this.closeModal('lesson-test-overlay'); }
 };
 
 window.onload = () => app.init();
