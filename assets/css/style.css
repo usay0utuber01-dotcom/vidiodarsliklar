@@ -83,6 +83,7 @@ body { background-color: var(--bg-dark); color: var(--text-main); overflow-x: hi
 
 /* LANDING CONTENT */
 .landing-container { height: 90vh; display: flex; align-items: center; justify-content: center; text-align: center; }
+.uni-brand { font-size: 1.5rem; font-weight: 700; letter-spacing: 10px; color: var(--text-dim); margin-bottom: -10px; opacity: 0.8; text-transform: uppercase; }
 .landing-content h1 { font-size: 6rem; font-weight: 800; margin-bottom: 2rem; letter-spacing: -3px; }
 .landing-content h1 span { color: var(--primary); text-shadow: 0 0 30px var(--primary-glow); }
 
